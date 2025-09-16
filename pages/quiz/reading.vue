@@ -3,36 +3,41 @@
     class="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-blue-100"
   >
     <!-- Header -->
-    <header class="flex justify-between items-center p-6">
+    <header class="flex justify-between items-center p-4 md:p-6">
       <NuxtLink
         to="/progress/reading"
-        class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+        class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
       >
         <span>←</span>
-        Back to Progress
+        <span class="hidden sm:inline">Back to Progress</span>
       </NuxtLink>
 
-      <div class="text-2xl font-bold text-purple-600">🎮 Reading Quiz</div>
+      <div class="text-lg md:text-2xl font-bold text-purple-600">
+        🎮 <span class="hidden sm:inline">Reading Quiz</span>
+      </div>
 
-      <div class="mx-14"></div>
+      <div class="w-16 md:w-14"></div>
     </header>
 
     <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center min-h-96">
+    <div v-if="loading" class="flex items-center justify-center min-h-96 px-4">
       <div class="text-center">
-        <div class="text-6xl mb-4">⏳</div>
-        <p class="text-2xl text-gray-600">Loading quiz...</p>
+        <div class="text-4xl md:text-6xl mb-4">⏳</div>
+        <p class="text-lg md:text-2xl text-gray-600">Loading quiz...</p>
       </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="flex items-center justify-center min-h-96">
+    <div
+      v-else-if="error"
+      class="flex items-center justify-center min-h-96 px-4"
+    >
       <div class="text-center">
-        <div class="text-6xl mb-4">❌</div>
-        <p class="text-xl text-red-600 mb-4">{{ error }}</p>
+        <div class="text-4xl md:text-6xl mb-4">❌</div>
+        <p class="text-lg md:text-xl text-red-600 mb-4">{{ error }}</p>
         <button
           @click="loadQuizData"
-          class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-3 px-6 rounded-full text-lg"
+          class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-base md:text-lg"
         >
           Try Again
         </button>
@@ -40,57 +45,62 @@
     </div>
 
     <!-- Quiz Container -->
-    <main v-else class="container mx-auto px-6 py-8">
+    <main v-else class="container mx-auto px-4 md:px-6 py-6 md:py-8">
       <!-- Today's Quiz Already Completed -->
       <div v-if="todayCompleted && !quizStarted" class="text-center">
-        <h1 class="text-6xl font-bold text-green-600 mb-8 bounce-gentle">
-          Already Completed! ✅
+        <h1
+          class="text-3xl md:text-5xl font-bold text-green-600 mb-4 md:mb-6 bounce-gentle"
+        >
+          Already Done Today! 🎉
         </h1>
 
         <div class="card-colorful max-w-2xl mx-auto">
-          <div class="text-4xl mb-6">🎉</div>
-          <h2 class="text-3xl font-bold text-gray-700 mb-4">
-            Great job! You've already completed today's quiz
+          <div class="text-3xl md:text-4xl mb-4 md:mb-6">🏆</div>
+          <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-4 md:mb-6">
+            Today's Results
           </h2>
 
-          <div class="bg-white rounded-xl p-6 mb-6">
-            <h3 class="font-bold text-green-600 mb-4">Today's Results:</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="bg-green-50 rounded-lg p-3">
-                <div class="text-2xl font-bold text-green-600">
-                  {{ todayResults.score }}
-                </div>
-                <div class="text-sm text-gray-600">Points</div>
+          <!-- Today's Results -->
+          <div class="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+            <div
+              class="bg-green-50 rounded-xl p-3 md:p-4 border-2 border-green-200"
+            >
+              <div class="text-xl md:text-2xl font-bold text-green-600">
+                {{ todayResults.score }}
               </div>
-              <div class="bg-blue-50 rounded-lg p-3">
-                <div class="text-2xl font-bold text-blue-600">
-                  {{ Math.round(todayResults.accuracy) }}%
-                </div>
-                <div class="text-sm text-gray-600">Accuracy</div>
+              <div class="text-xs md:text-sm text-gray-600">Score</div>
+            </div>
+            <div
+              class="bg-blue-50 rounded-xl p-3 md:p-4 border-2 border-blue-200"
+            >
+              <div class="text-xl md:text-2xl font-bold text-blue-600">
+                {{ todayResults.accuracy }}%
               </div>
+              <div class="text-xs md:text-sm text-gray-600">Accuracy</div>
             </div>
           </div>
 
-          <div class="space-y-4">
+          <div class="space-y-3 md:space-y-4">
             <NuxtLink
               to="/progress/reading"
-              class="btn-primary inline-flex items-center gap-2"
+              class="btn-primary inline-flex items-center gap-2 text-base md:text-xl py-3 px-6"
             >
               <span>📊</span>
               View Progress
             </NuxtLink>
 
-            <div>
+            <div class="flex flex-col sm:flex-row gap-2 justify-center">
               <button
                 @click="allowRetake"
-                class="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 mx-2"
+                class="bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
               >
-                🔄 Practice Again
+                🔄 <span class="hidden sm:inline">Practice Again</span
+                ><span class="sm:hidden">Again</span>
               </button>
 
               <NuxtLink
                 to="/"
-                class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 mx-2"
+                class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
               >
                 🏠 Home
               </NuxtLink>
@@ -101,21 +111,32 @@
 
       <!-- Quiz Not Started -->
       <div v-else-if="!quizStarted" class="text-center">
-        <h1 class="text-6xl font-bold text-purple-600 mb-8 bounce-gentle">
+        <h1
+          class="text-3xl md:text-5xl font-bold text-purple-600 mb-4 md:mb-6 bounce-gentle"
+        >
           Ready to Practice? 🎯
         </h1>
 
         <div class="card-colorful max-w-2xl mx-auto">
-          <div class="text-4xl mb-6">📚</div>
-          <h2 class="text-3xl font-bold text-gray-700 mb-4">
-            Today's Chinese Reading Challenge
+          <div class="text-3xl md:text-4xl mb-4 md:mb-6">📚</div>
+          <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-4">
+            <span class="hidden sm:inline"
+              >Today's Chinese Reading Challenge</span
+            >
+            <span class="sm:hidden">Today's Challenge</span>
           </h2>
 
-          <div class="bg-white rounded-xl p-4 mb-6">
-            <h3 class="font-bold text-purple-600 mb-2">
-              📊 Today's Word List ({{ quizWords.length }} words):
+          <div class="bg-white rounded-xl p-3 md:p-4 mb-4 md:mb-6">
+            <h3 class="font-bold text-purple-600 mb-2 text-sm md:text-lg">
+              📊
+              <span class="hidden sm:inline"
+                >Today's Word List ({{ quizWords.length }} words):</span
+              >
+              <span class="sm:hidden">{{ quizWords.length }} Words:</span>
             </h3>
-            <div class="grid grid-cols-2 gap-2 text-sm">
+            <div
+              class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs md:text-sm"
+            >
               <div
                 v-for="word in quizWords.slice(0, 6)"
                 :key="word.id"
@@ -133,10 +154,14 @@
             </div>
           </div>
 
-          <div class="space-y-4 mb-8">
-            <div class="bg-white rounded-xl p-4 text-left">
-              <h3 class="font-bold text-purple-600 mb-2">🎤 How it works:</h3>
-              <ul class="text-gray-600 space-y-2">
+          <div class="space-y-3 md:space-y-4 mb-6 md:mb-8">
+            <div class="bg-white rounded-xl p-3 md:p-4 text-left">
+              <h3 class="font-bold text-purple-600 mb-2 text-sm md:text-lg">
+                🎤 How it works:
+              </h3>
+              <ul
+                class="text-gray-600 space-y-1 md:space-y-2 text-xs md:text-base"
+              >
                 <li>• Look at the Chinese word and try to read it aloud</li>
                 <li>• Click "Listen" to hear the correct pronunciation</li>
                 <li>• Click "Record" and say the word yourself</li>
@@ -149,7 +174,7 @@
           <button
             @click="startQuiz"
             :disabled="quizWords.length === 0"
-            class="btn-primary text-2xl py-4 px-8 inline-flex items-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed"
+            class="btn-primary text-base md:text-xl py-3 px-6 md:py-4 md:px-8 inline-flex items-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed"
           >
             <span>🚀</span>
             {{ quizWords.length === 0 ? "No Words Available" : "Start Quiz!" }}
@@ -160,18 +185,20 @@
       <!-- Quiz in Progress -->
       <div v-else-if="!quizCompleted" class="max-w-4xl mx-auto">
         <!-- Progress Bar -->
-        <div class="mb-8">
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-lg font-semibold text-gray-600">
+        <div class="mb-4 md:mb-6">
+          <div
+            class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 text-xs md:text-base gap-1"
+          >
+            <span class="font-semibold text-gray-600">
               Question {{ currentQuestionIndex + 1 }} of {{ totalQuestions }}
             </span>
-            <span class="text-lg font-semibold text-purple-600">
+            <span class="font-semibold text-purple-600">
               Score: {{ score }} points
             </span>
           </div>
-          <div class="w-full bg-gray-200 rounded-full h-3">
+          <div class="w-full bg-gray-200 rounded-full h-2 md:h-3">
             <div
-              class="bg-gradient-to-r from-purple-400 to-pink-400 h-3 rounded-full transition-all duration-500"
+              class="bg-gradient-to-r from-purple-400 to-pink-400 h-2 md:h-3 rounded-full transition-all duration-500"
               :style="{
                 width: `${
                   ((currentQuestionIndex + 1) / totalQuestions) * 100
@@ -183,25 +210,26 @@
 
         <!-- Current Question -->
         <div class="card-colorful text-center">
-          <div class="text-6xl mb-4">📖</div>
-          <h2 class="text-2xl font-bold text-gray-700 mb-6">
-            Read this Chinese word aloud:
+          <div class="text-3xl md:text-4xl mb-3 md:mb-4">📖</div>
+          <h2 class="text-lg md:text-xl font-bold text-gray-700 mb-3 md:mb-4">
+            <span class="hidden sm:inline">Read this Chinese word aloud:</span>
+            <span class="sm:hidden">Read aloud:</span>
           </h2>
 
           <!-- Chinese Word Display -->
           <div
-            class="chinese-text text-8xl font-bold text-purple-600 mb-8 select-none"
+            class="chinese-text text-4xl md:text-6xl lg:text-8xl font-bold text-purple-600 mb-4 md:mb-6 select-none"
           >
             {{ currentWord.chinese }}
           </div>
 
           <!-- Control Buttons -->
-          <div class="flex justify-center gap-4 mb-6 flex-wrap">
+          <div class="flex flex-col gap-2 md:gap-3 mb-4 md:mb-6">
             <!-- Listen Button -->
             <button
               @click="playAudio"
               :disabled="isPlaying"
-              class="bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex items-center gap-2"
+              class="bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex items-center gap-2 justify-center"
             >
               <span>{{ isPlaying ? "🔊" : "🎵" }}</span>
               {{ isPlaying ? "Playing..." : "Listen" }}
@@ -218,22 +246,25 @@
                   ? 'from-red-400 to-red-500 hover:from-red-500 hover:to-red-600'
                   : 'from-green-400 to-green-500 hover:from-green-500 hover:to-green-600',
               ]"
-              class="bg-gradient-to-r text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex items-center gap-2"
+              class="bg-gradient-to-r text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex items-center gap-2 justify-center"
             >
               <span>{{ isRecording ? "⏹️" : "🎤" }}</span>
-              {{
+              <span class="hidden sm:inline">{{
                 hasAttempted
                   ? "Already Attempted"
                   : isRecording
                   ? "Stop Recording"
                   : "Record Yourself"
-              }}
+              }}</span>
+              <span class="sm:hidden">{{
+                hasAttempted ? "Done" : isRecording ? "Stop" : "Record"
+              }}</span>
             </button>
 
             <!-- Hint Button -->
             <button
               @click="showHint = !showHint"
-              class="bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center gap-2"
+              class="bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center gap-2 justify-center"
             >
               <span>💡</span>
               {{ showHint ? "Hide Hint" : "Need Help?" }}
@@ -243,47 +274,56 @@
           <!-- Hint Section -->
           <div
             v-if="showHint"
-            class="bg-yellow-50 rounded-xl p-6 mb-6 text-left"
+            class="bg-yellow-50 rounded-xl p-3 md:p-4 mb-4 md:mb-6 text-left"
           >
-            <h3 class="font-bold text-yellow-700 mb-3 flex items-center gap-2">
+            <h3
+              class="font-bold text-yellow-700 mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-lg"
+            >
               <span>💡</span>
               Helpful Hints:
             </h3>
-            <div class="space-y-3">
-              <div class="bg-white rounded-lg p-3">
-                <strong>English meaning:</strong> {{ currentWord.english }}
+            <div class="space-y-2 md:space-y-3">
+              <div class="bg-white rounded-lg p-2 md:p-3">
+                <strong class="text-sm md:text-base">English meaning:</strong>
+                <span class="text-sm md:text-base">{{
+                  currentWord.english
+                }}</span>
               </div>
 
               <div
                 v-if="currentWord.sample_sentence_chinese"
-                class="bg-white rounded-lg p-3"
+                class="bg-white rounded-lg p-2 md:p-3"
               >
-                <strong>Example sentence:</strong><br />
-                <span class="chinese-text">{{
-                  currentWord.sample_sentence_chinese
-                }}</span
-                ><br />
-                <span class="text-gray-600">{{
-                  currentWord.sample_sentence_english
-                }}</span>
+                <strong class="text-sm md:text-base">Example sentence:</strong>
+                <div class="chinese-text mt-1 text-sm md:text-base">
+                  {{ currentWord.sample_sentence_chinese }}
+                </div>
+                <div
+                  v-if="currentWord.sample_sentence_english"
+                  class="text-gray-600 text-xs md:text-sm mt-1"
+                >
+                  {{ currentWord.sample_sentence_english }}
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Recording Status -->
-          <div v-if="recordingStatus" class="mb-6">
+          <div v-if="recordingStatus" class="mb-4 md:mb-6">
             <div
-              :class="
+              :class="[
                 recordingStatus.type === 'success'
                   ? 'bg-green-50 border-green-200 text-green-700'
                   : recordingStatus.type === 'error'
                   ? 'bg-red-50 border-red-200 text-red-700'
-                  : 'bg-blue-50 border-blue-200 text-blue-700'
-              "
-              class="border-2 rounded-xl p-4"
+                  : 'bg-blue-50 border-blue-200 text-blue-700',
+              ]"
+              class="rounded-xl p-3 md:p-4 border-2"
             >
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-2xl">
+              <div
+                class="flex items-center gap-2 mb-1 font-bold text-sm md:text-lg"
+              >
+                <span>
                   {{
                     recordingStatus.type === "success"
                       ? "✅"
@@ -294,8 +334,11 @@
                 </span>
                 <strong>{{ recordingStatus.title }}</strong>
               </div>
-              <p>{{ recordingStatus.message }}</p>
-              <div v-if="recordingStatus.points" class="mt-2 text-lg font-bold">
+              <p class="text-xs md:text-base">{{ recordingStatus.message }}</p>
+              <div
+                v-if="recordingStatus.points"
+                class="mt-2 text-sm md:text-lg font-bold"
+              >
                 +{{ recordingStatus.points }} points!
               </div>
             </div>
@@ -306,7 +349,7 @@
             <button
               v-if="canProceed"
               @click="nextQuestion"
-              class="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+              class="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
             >
               {{
                 currentQuestionIndex === totalQuestions - 1
@@ -320,63 +363,66 @@
 
       <!-- Quiz Completed -->
       <div v-else class="text-center">
-        <h1 class="text-6xl font-bold text-green-600 mb-8 bounce-gentle">
+        <h1
+          class="text-3xl md:text-5xl font-bold text-green-600 mb-4 md:mb-6 bounce-gentle"
+        >
           Great Job! 🎉
         </h1>
 
         <div class="card-colorful max-w-2xl mx-auto">
-          <div class="text-4xl mb-6">🏆</div>
-          <h2 class="text-3xl font-bold text-gray-700 mb-6">Quiz Complete!</h2>
+          <div class="text-3xl md:text-4xl mb-4 md:mb-6">🏆</div>
+          <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-4 md:mb-6">
+            Quiz Complete!
+          </h2>
 
-          <div v-if="saving" class="mb-6">
-            <div class="text-2xl mb-2">💾</div>
-            <p class="text-lg text-blue-600">Saving your results...</p>
+          <div v-if="saving" class="mb-4 md:mb-6">
+            <div class="text-xl md:text-2xl mb-2">💾</div>
+            <p class="text-base md:text-lg text-blue-600">
+              Saving your results...
+            </p>
           </div>
 
           <!-- Final Score -->
-          <div class="grid grid-cols-2 gap-4 mb-8">
-            <div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
-              <div class="text-3xl font-bold text-green-600">{{ score }}</div>
-              <div class="text-sm text-gray-600">Total Points</div>
+          <div class="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+            <div
+              class="bg-green-50 rounded-xl p-3 md:p-4 border-2 border-green-200"
+            >
+              <div class="text-xl md:text-2xl font-bold text-green-600">
+                {{ score }}
+              </div>
+              <div class="text-xs md:text-sm text-gray-600">Total Points</div>
             </div>
-            <div class="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
-              <div class="text-3xl font-bold text-blue-600">
+            <div
+              class="bg-blue-50 rounded-xl p-3 md:p-4 border-2 border-blue-200"
+            >
+              <div class="text-xl md:text-2xl font-bold text-blue-600">
                 {{ Math.round(accuracy) }}%
               </div>
-              <div class="text-sm text-gray-600">Accuracy</div>
+              <div class="text-xs md:text-sm text-gray-600">Accuracy</div>
             </div>
           </div>
 
-          <!-- Grade Display -->
-          <div class="mb-8">
-            <div class="text-6xl mb-2">{{ gradeEmoji }}</div>
-            <div class="text-3xl font-bold" :class="gradeColor">
-              Grade: {{ finalGrade }}
-            </div>
-            <div class="text-lg text-gray-600 mt-2">{{ gradeMessage }}</div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="space-y-4">
+          <div class="space-y-3 md:space-y-4">
             <NuxtLink
               to="/progress/reading"
-              class="btn-primary inline-flex items-center gap-2"
+              class="btn-primary inline-flex items-center gap-2 text-base md:text-xl py-3 px-6"
             >
               <span>📊</span>
               View Progress
             </NuxtLink>
 
-            <div>
+            <div class="flex flex-col sm:flex-row gap-2 justify-center">
               <button
                 @click="restartQuiz"
-                class="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 mx-2"
+                class="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
               >
-                🔄 Try Again
+                🔄 <span class="hidden sm:inline">Try Again</span
+                ><span class="sm:hidden">Again</span>
               </button>
 
               <NuxtLink
                 to="/"
-                class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 mx-2"
+                class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
               >
                 🏠 Home
               </NuxtLink>
@@ -450,26 +496,36 @@ const loadQuizData = async () => {
 
   try {
     // Check if today's quiz is already completed
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date();
+    const todayDateString = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    console.log("Checking for quiz results on date:", todayDateString);
+
     const { data: existingResult, error: resultError } = await supabase
       .from("quiz_results")
       .select("*")
-      .eq("date", today)
-      .single();
+      .eq("date", todayDateString)
+      .maybeSingle(); // Use maybeSingle instead of single to avoid error when no record exists
 
-    if (resultError && resultError.code !== "PGRST116") {
-      // PGRST116 is "not found" error, which is expected if no quiz today
+    if (resultError) {
+      console.error("Error checking existing quiz result:", resultError);
       throw resultError;
     }
 
     if (existingResult) {
+      console.log("Found existing quiz result:", existingResult);
       todayCompleted.value = true;
       todayResults.value = {
-        score: existingResult.score,
-        accuracy: existingResult.accuracy,
-        wordsStudied: existingResult.words_studied,
-        correctAnswers: existingResult.correct_answers,
+        score: existingResult.score || 0,
+        accuracy: Math.round(existingResult.accuracy || 0),
+        wordsStudied: existingResult.words_studied || 0,
+        correctAnswers: existingResult.correct_answers || 0,
       };
+    } else {
+      console.log("No existing quiz result found for today");
+      todayCompleted.value = false;
     }
 
     // Load words from database
@@ -501,7 +557,10 @@ const saveQuizResults = async () => {
   saving.value = true;
 
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date();
+    const todayDateString = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     // Prepare words data for JSON storage
     const wordsData = wordResults.value.filter(Boolean).map((word) => ({
@@ -510,34 +569,35 @@ const saveQuizResults = async () => {
       correct: word.correct,
     }));
 
+    const quizResult = {
+      date: todayDateString,
+      words_studied: totalQuestions.value,
+      correct_answers: correctAnswers.value,
+      accuracy: accuracy.value,
+      score: score.value,
+      completed: true,
+      words_data: wordsData,
+    };
+
+    console.log("Saving quiz result:", quizResult);
+
     // Insert or update quiz result
     const { data, error: upsertError } = await supabase
       .from("quiz_results")
-      .upsert(
-        {
-          date: today,
-          words_studied: totalQuestions.value,
-          correct_answers: correctAnswers.value,
-          accuracy: accuracy.value,
-          score: score.value,
-          completed: true,
-          words_data: wordsData,
-        },
-        {
-          onConflict: "date",
-        }
-      )
+      .upsert(quizResult, {
+        onConflict: "date",
+      })
       .select();
 
     if (upsertError) throw upsertError;
 
-    console.log("✅ Quiz results saved successfully");
+    console.log("✅ Quiz results saved successfully", data);
 
     // Update today's status
     todayCompleted.value = true;
     todayResults.value = {
       score: score.value,
-      accuracy: accuracy.value,
+      accuracy: Math.round(accuracy.value),
       wordsStudied: totalQuestions.value,
       correctAnswers: correctAnswers.value,
     };
@@ -881,51 +941,6 @@ const accuracy = computed(() => {
   return totalQuestions.value > 0
     ? (correctAnswers.value / totalQuestions.value) * 100
     : 0;
-});
-
-const finalGrade = computed(() => {
-  const acc = accuracy.value;
-  if (acc >= 95) return "A+";
-  if (acc >= 90) return "A";
-  if (acc >= 85) return "A-";
-  if (acc >= 80) return "B+";
-  if (acc >= 75) return "B";
-  if (acc >= 70) return "B-";
-  if (acc >= 65) return "C+";
-  if (acc >= 60) return "C";
-  if (acc >= 55) return "C-";
-  if (acc >= 50) return "D";
-  return "F";
-});
-
-const gradeEmoji = computed(() => {
-  const grade = finalGrade.value;
-  if (["A+", "A"].includes(grade)) return "🌟";
-  if (["A-", "B+", "B"].includes(grade)) return "😊";
-  if (["B-", "C+", "C"].includes(grade)) return "🙂";
-  if (["C-", "D"].includes(grade)) return "😐";
-  return "😔";
-});
-
-const gradeColor = computed(() => {
-  const grade = finalGrade.value;
-  if (["A+", "A"].includes(grade)) return "text-green-600";
-  if (["A-", "B+", "B"].includes(grade)) return "text-blue-600";
-  if (["B-", "C+", "C"].includes(grade)) return "text-yellow-600";
-  if (["C-", "D"].includes(grade)) return "text-orange-600";
-  return "text-red-600";
-});
-
-const gradeMessage = computed(() => {
-  const grade = finalGrade.value;
-  if (["A+", "A"].includes(grade)) return "Excellent pronunciation! 🎉";
-  if (["A-", "B+", "B"].includes(grade))
-    return "Great job! Keep practicing! 👏";
-  if (["B-", "C+", "C"].includes(grade))
-    return "Good effort! You're improving! 💪";
-  if (["C-", "D"].includes(grade))
-    return "Keep practicing, you'll get better! 📚";
-  return "Don't give up! Practice makes perfect! 🌱";
 });
 
 // Methods
