@@ -587,8 +587,6 @@ const addWord = async () => {
 
     // Refresh the words list to show the new word
     await fetchWords();
-
-    console.log("✅ Word added successfully");
   } catch (err) {
     console.error("❌ Error adding word:", err);
     error.value = "Failed to add word. Please try again.";
@@ -638,8 +636,6 @@ const updateWord = async () => {
 
     // Refresh the words list to show the updated word
     await fetchWords();
-
-    console.log("✅ Word updated successfully");
   } catch (err) {
     console.error("❌ Error updating word:", err);
     error.value = "Failed to update word. Please try again.";
@@ -664,10 +660,6 @@ const toggleWordStatus = async (word) => {
 
     // Refresh the words list to show the updated status
     await fetchWords();
-
-    console.log(
-      `✅ Word ${newStatus === "paused" ? "paused" : "resumed"} successfully`
-    );
   } catch (err) {
     console.error("❌ Error updating word status:", err);
     error.value = "Failed to update word status. Please try again.";
@@ -698,8 +690,6 @@ const deleteWord = async (word) => {
 
     // Refresh the words list to remove the deleted word
     await fetchWords();
-
-    console.log("✅ Word deleted successfully");
   } catch (err) {
     console.error("❌ Error deleting word:", err);
     error.value = "Failed to delete word. Please try again.";

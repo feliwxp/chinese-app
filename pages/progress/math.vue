@@ -551,8 +551,6 @@ const saveMathResult = async (mathData) => {
 
     if (upsertError) throw upsertError;
 
-    console.log("✅ Math result saved successfully");
-
     // Refresh today's data after saving
     await fetchTodayProgressData();
 

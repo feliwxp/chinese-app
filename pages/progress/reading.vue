@@ -479,7 +479,6 @@ const fetchProgressData = async (startDate, endDate) => {
     });
 
     progressData.value = transformedData;
-    console.log("✅ Progress data loaded successfully");
   } catch (err) {
     console.error("❌ Error fetching progress data:", err);
     error.value = "Failed to load progress data. Please try again.";
@@ -518,8 +517,6 @@ const saveQuizResult = async (quizData) => {
       .select();
 
     if (upsertError) throw upsertError;
-
-    console.log("✅ Quiz result saved successfully");
 
     // Refresh today's data after saving
     await fetchTodayQuizData();

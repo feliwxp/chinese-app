@@ -502,7 +502,6 @@ const loadQuestions = async () => {
     if (fetchError) throw fetchError;
 
     questions.value = mathQuestions || [];
-    console.log("✅ Math questions loaded from database");
   } catch (err) {
     console.error("❌ Error loading math questions:", err);
     error.value = "Failed to load questions. Please try again.";
@@ -532,7 +531,6 @@ const saveQuestionToDatabase = async (questionData) => {
 
     if (insertError) throw insertError;
 
-    console.log("✅ Question saved to database");
     await loadQuestions(); // Reload questions
   } catch (err) {
     console.error("❌ Error saving question to database:", err);
@@ -557,12 +555,6 @@ const toggleQuestionStatus = async (question) => {
 
     // Refresh the questions list to show the updated status
     await loadQuestions();
-
-    console.log(
-      `✅ Question ${
-        newStatus === "paused" ? "paused" : "resumed"
-      } successfully`
-    );
   } catch (err) {
     console.error("❌ Error updating question status:", err);
     error.value = "Failed to update question status. Please try again.";
@@ -588,7 +580,6 @@ const deleteQuestionFromDatabase = async (question) => {
 
     if (deleteError) throw deleteError;
 
-    console.log("✅ Question deleted from database");
     await loadQuestions(); // Reload questions
   } catch (err) {
     console.error("❌ Error deleting question from database:", err);
@@ -654,8 +645,6 @@ const updateQuestion = async () => {
 
     // Refresh the questions list to show the updated question
     await loadQuestions();
-
-    console.log("✅ Question updated successfully");
   } catch (err) {
     console.error("❌ Error updating question:", err);
     error.value = "Failed to update question. Please try again.";

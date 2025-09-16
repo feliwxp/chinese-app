@@ -579,8 +579,6 @@ const loadQuestions = async () => {
       today.getMonth() + 1
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    console.log("Checking for math results on date:", todayDateString);
-
     const { data: existingResult, error: resultError } = await supabase
       .from("math_results")
       .select("*")
@@ -593,7 +591,6 @@ const loadQuestions = async () => {
     }
 
     if (existingResult) {
-      console.log("Found existing math result:", existingResult);
       todayCompleted.value = true;
       todayResults.value = {
         score: existingResult.score || 0,
@@ -602,7 +599,6 @@ const loadQuestions = async () => {
         correctAnswers: existingResult.correct_answers || 0,
       };
     } else {
-      console.log("No existing math result found for today");
       todayCompleted.value = false;
     }
 
@@ -623,9 +619,6 @@ const loadQuestions = async () => {
         answer: question.answer,
         explanation: question.explanation,
       }));
-      console.log(
-        `✅ ${questions.value.length} active math questions loaded from database`
-      );
     } else {
       // If no active questions in database, try localStorage as fallback
       const stored = localStorage.getItem("mathQuestions");
@@ -637,10 +630,6 @@ const loadQuestions = async () => {
         );
         if (activeQuestions.length > 0) {
           questions.value = activeQuestions;
-          console.log(
-            "✅ Active math questions loaded from localStorage:",
-            questions.value.length
-          );
         } else {
           questions.value = [];
         }
@@ -663,9 +652,6 @@ const loadQuestions = async () => {
         if (activeQuestions.length > 0) {
           questions.value = activeQuestions;
           error.value = null;
-          console.log(
-            "✅ Fallback: Active math questions loaded from localStorage"
-          );
         }
       }
     } catch (localError) {
@@ -689,8 +675,6 @@ const saveMathResults = async (mathData) => {
       String(today.getMonth() + 1).padStart(2, "0") +
       "-" +
       String(today.getDate()).padStart(2, "0");
-
-    console.log("📅 Saving results for date:", localDate); // Debug log
 
     // Check if entry for today already exists
     const { data: existingResult, error: fetchError } = await supabase
@@ -747,7 +731,6 @@ const saveMathResults = async (mathData) => {
         .eq("date", localDate);
 
       if (updateError) throw updateError;
-      console.log("✅ Math results updated in database for", localDate);
     } else {
       // Insert new record
       const { error: insertError } = await supabase
@@ -755,7 +738,6 @@ const saveMathResults = async (mathData) => {
         .insert(resultData);
 
       if (insertError) throw insertError;
-      console.log("✅ Math results saved to database for", localDate);
     }
 
     // Update today's status
@@ -883,7 +865,6 @@ const nextQuestion = async () => {
 
       try {
         await saveMathResults(mathData);
-        console.log("✅ Math results saved successfully");
       } catch (error) {
         console.error("❌ Failed to save math results:", error);
         // Could show a toast notification here

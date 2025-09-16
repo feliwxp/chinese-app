@@ -501,8 +501,6 @@ const loadQuizData = async () => {
       today.getMonth() + 1
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    console.log("Checking for quiz results on date:", todayDateString);
-
     const { data: existingResult, error: resultError } = await supabase
       .from("quiz_results")
       .select("*")
@@ -515,7 +513,6 @@ const loadQuizData = async () => {
     }
 
     if (existingResult) {
-      console.log("Found existing quiz result:", existingResult);
       todayCompleted.value = true;
       todayResults.value = {
         score: existingResult.score || 0,
@@ -524,7 +521,6 @@ const loadQuizData = async () => {
         correctAnswers: existingResult.correct_answers || 0,
       };
     } else {
-      console.log("No existing quiz result found for today");
       todayCompleted.value = false;
     }
 
@@ -543,7 +539,6 @@ const loadQuizData = async () => {
       );
     }
     quizWords.value = words;
-    console.log(`✅ Loaded ${words.length} words from database`);
   } catch (err) {
     console.error("❌ Error loading quiz data:", err);
     error.value = err.message || "Failed to load quiz data. Please try again.";
@@ -579,8 +574,6 @@ const saveQuizResults = async () => {
       words_data: wordsData,
     };
 
-    console.log("Saving quiz result:", quizResult);
-
     // Insert or update quiz result
     const { data, error: upsertError } = await supabase
       .from("quiz_results")
@@ -590,8 +583,6 @@ const saveQuizResults = async () => {
       .select();
 
     if (upsertError) throw upsertError;
-
-    console.log("✅ Quiz results saved successfully", data);
 
     // Update today's status
     todayCompleted.value = true;
@@ -630,13 +621,10 @@ const initSpeechRecognition = () => {
     recognition.interimResults = false;
     recognition.lang = "zh-CN";
 
-    recognition.onstart = () => {
-      console.log("Speech recognition started");
-    };
+    recognition.onstart = () => {};
 
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      console.log("Recognized speech:", transcript);
       processSpeechResult(transcript);
     };
 
@@ -647,7 +635,6 @@ const initSpeechRecognition = () => {
 
     recognition.onend = () => {
       isRecording.value = false;
-      console.log("Speech recognition ended");
     };
   }
 };
@@ -666,9 +653,6 @@ const processSpeechResult = (transcript) => {
 
   const currentChinese = currentWord.value.chinese;
   const similarity = calculateSimilarity(transcript, currentChinese);
-  console.log(
-    `Comparing "${transcript}" with "${currentChinese}" - similarity: ${similarity}`
-  );
 
   const isCorrect = similarity > 0.7;
   hasAttempted.value = true;
