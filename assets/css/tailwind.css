@@ -1,0 +1,82 @@
+/* Main CSS file for Chinese Learning App */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Custom kid-friendly styles */
+@layer base {
+  html {
+    font-family: 'Nunito', sans-serif;
+  }
+  
+  h1, h2, h3 {
+    font-family: 'Fredoka One', cursive;
+  }
+  
+  .chinese-text {
+    font-family: 'Noto Sans SC', sans-serif;
+  }
+}
+
+@layer components {
+  /* Kid-friendly button styles */
+  .btn-primary {
+    @apply bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-green-400 to-emerald-400 hover:from-green-500 hover:to-emerald-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-400 to-orange-400 hover:from-red-500 hover:to-orange-500 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+  
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-xl p-6 border-4 border-gray-100;
+  }
+  
+  .card-colorful {
+    @apply bg-gradient-to-br from-yellow-100 to-orange-100 rounded-2xl shadow-xl p-6 border-4 border-yellow-200;
+  }
+  
+  /* Input styles */
+  .input-primary {
+    @apply w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200;
+  }
+  
+  /* Animation classes */
+  .bounce-gentle {
+    animation: bounce-gentle 1s infinite;
+  }
+  
+  .pulse-slow {
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Fun background patterns */
+.bg-pattern-stars {
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+}
+
+.bg-pattern-waves {
+  background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+}

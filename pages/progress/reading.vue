@@ -1,0 +1,668 @@
+<template>
+  <!-- Loading State -->
+  <div
+    v-if="loading"
+    class="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-purple-100 flex items-center justify-center"
+  >
+    <div class="text-center">
+      <div class="text-6xl mb-4">⏳</div>
+      <p class="text-2xl text-gray-600">Loading progress data...</p>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div
+    v-else-if="error"
+    class="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-purple-100 flex items-center justify-center"
+  >
+    <div class="text-center">
+      <div class="text-6xl mb-4">❌</div>
+      <p class="text-xl text-red-600 mb-4">{{ error }}</p>
+      <button
+        @click="refreshCurrentWeekData"
+        class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-3 px-6 rounded-full text-lg"
+      >
+        Try Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content - Your existing template -->
+  <div
+    v-else
+    class="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-purple-100"
+  >
+    <!-- Header -->
+    <header class="flex justify-between items-center p-6">
+      <NuxtLink
+        to="/"
+        class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+      >
+        <span>←</span>
+        Back Home
+      </NuxtLink>
+
+      <div class="text-2xl font-bold text-blue-600">📚 Reading Progress</div>
+
+      <div class="mx-16"></div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+      <!-- Page Title and Today's Quiz Button -->
+      <div class="text-center mb-8">
+        <h1 class="text-5xl font-bold text-blue-600 mb-4">
+          Elsa's Reading Journey
+        </h1>
+        <p class="text-xl text-gray-700 mb-6">
+          Track your progress and keep learning!
+        </p>
+
+        <!-- Start Today's Quiz Button -->
+        <NuxtLink
+          v-if="!isTodayQuizCompleted"
+          to="/quiz/reading"
+          class="inline-block bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-4 px-8 rounded-full text-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 pulse-slow"
+        >
+          <span class="text-3xl">🎮</span>
+          Start Today's Quiz!
+        </NuxtLink>
+
+        <div
+          v-else
+          class="inline-block bg-gray-400 text-gray-600 cursor-not-allowed font-bold py-4 px-8 rounded-full text-2xl shadow-lg"
+        >
+          <span class="text-3xl">✅</span>
+          Quiz Completed!
+        </div>
+      </div>
+
+      <!-- Weekly Scores Overview -->
+      <div class="card mb-8">
+        <h2
+          class="text-3xl font-bold text-center text-gray-700 mb-6 flex items-center justify-center gap-2"
+        >
+          <span>📊</span>
+          Weekly Progress Summary
+        </h2>
+
+        <!-- Week Navigation -->
+        <div class="flex justify-between items-center mb-6">
+          <button
+            @click="previousWeek"
+            class="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-2 px-4 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
+          >
+            ← Previous Week
+          </button>
+
+          <div class="flex items-center gap-4">
+            <div class="text-lg font-semibold text-gray-600">
+              {{ currentWeekRange }}
+            </div>
+            <button
+              @click="goToToday"
+              class="bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white font-bold py-2 px-4 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
+            >
+              📅 Today
+            </button>
+          </div>
+
+          <button
+            @click="nextWeek"
+            class="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-2 px-4 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
+          >
+            Next Week →
+          </button>
+        </div>
+
+        <!-- Weekly Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div
+            class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center border-2 border-green-200"
+          >
+            <div class="text-3xl mb-2">📚</div>
+            <div class="text-2xl font-bold text-green-600">
+              {{ weeklyStats.totalWords }}
+            </div>
+            <div class="text-sm text-gray-600">Total Words</div>
+          </div>
+
+          <div
+            class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 text-center border-2 border-blue-200"
+          >
+            <div class="text-3xl mb-2">🎯</div>
+            <div class="text-2xl font-bold text-blue-600">
+              {{ weeklyStats.averageAccuracy }}%
+            </div>
+            <div class="text-sm text-gray-600">Avg Accuracy</div>
+          </div>
+
+          <div
+            class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 text-center border-2 border-purple-200"
+          >
+            <div class="text-3xl mb-2">📊</div>
+            <div class="text-2xl font-bold text-purple-600">
+              {{ weeklyStats.grade }}
+            </div>
+            <div class="text-sm text-gray-600">Weekly Grade</div>
+          </div>
+
+          <div
+            class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-4 text-center border-2 border-yellow-200"
+          >
+            <div class="text-3xl mb-2">📅</div>
+            <div class="text-2xl font-bold text-yellow-600">
+              {{ weeklyStats.daysActive }}
+            </div>
+            <div class="text-sm text-gray-600">Days Active</div>
+          </div>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-4">
+          <!-- Daily Breakdown for the Week -->
+          <div class="space-y-8">
+            <div class="grid grid-cols-7 gap-2">
+              <div
+                v-for="(day, index) in weekDays"
+                :key="index"
+                @click="toggleDaySelection(day)"
+                :class="getWeekDayClass(day)"
+                class="text-center p-3 rounded-lg transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg"
+              >
+                <div class="font-bold text-sm">{{ day.shortName }}</div>
+                <div class="text-xs text-gray-500 mb-1">{{ day.date }}</div>
+                <div v-if="day.data" class="space-y-1">
+                  <div
+                    class="text-lg font-bold"
+                    :class="
+                      day.data.completed ? 'text-green-600' : 'text-gray-400'
+                    "
+                  >
+                    {{ day.data.score || 0 }}pts
+                  </div>
+                  <div class="text-xs">
+                    {{ day.data.wordsStudied || 0 }} words
+                  </div>
+                  <div class="text-xs">{{ day.data.accuracy || 0 }}%</div>
+                </div>
+                <div v-else class="text-gray-400 text-sm">No activity</div>
+              </div>
+            </div>
+
+            <!-- Selected Day Details -->
+            <div v-if="selectedDay && showDayDetails">
+              <h3 class="text-2xl font-bold text-center text-gray-700 mb-6">
+                📊 {{ selectedDateFormatted }} Details
+              </h3>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <!-- Day Stats -->
+                <div>
+                  <h4
+                    class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2"
+                  >
+                    <span>📈</span>
+                    Performance
+                  </h4>
+                  <div class="space-y-3">
+                    <div
+                      class="flex justify-between p-3 bg-green-50 rounded-lg"
+                    >
+                      <span>Words Studied:</span>
+                      <span class="font-bold text-green-600">{{
+                        selectedDayData.wordsStudied || 0
+                      }}</span>
+                    </div>
+                    <div class="flex justify-between p-3 bg-blue-50 rounded-lg">
+                      <span>Correct Answers:</span>
+                      <span class="font-bold text-blue-600">{{
+                        selectedDayData.correctAnswers || 0
+                      }}</span>
+                    </div>
+                    <div
+                      class="flex justify-between p-3 bg-purple-50 rounded-lg"
+                    >
+                      <span>Accuracy:</span>
+                      <span class="font-bold text-purple-600"
+                        >{{ selectedDayData.accuracy || 0 }}%</span
+                      >
+                    </div>
+                    <div
+                      class="flex justify-between p-3 bg-yellow-50 rounded-lg"
+                    >
+                      <span>Points Earned:</span>
+                      <span class="font-bold text-yellow-600">{{
+                        selectedDayData.score || 0
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Words List -->
+                <div>
+                  <h4
+                    class="text-xl font-bold text-green-600 mb-4 flex items-center gap-2"
+                  >
+                    <span>📝</span>
+                    Words Practiced
+                  </h4>
+                  <div class="max-h-60 overflow-y-auto space-y-2">
+                    <div
+                      v-if="
+                        selectedDayData.words &&
+                        selectedDayData.words.length > 0
+                      "
+                    >
+                      <div
+                        v-for="word in selectedDayData.words"
+                        :key="word.id"
+                        class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div>
+                          <div class="chinese-text text-lg font-semibold">
+                            {{ word.chinese }}
+                          </div>
+                          <div class="text-sm text-gray-600">
+                            {{ word.english }}
+                          </div>
+                        </div>
+                        <div
+                          :class="
+                            word.correct ? 'text-green-500' : 'text-red-500'
+                          "
+                        >
+                          {{ word.correct ? "✅" : "❌" }}
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="text-center text-gray-500 py-8">
+                      No words practiced on this day yet
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</template>
+
+<script setup>
+// Page metadata
+useHead({
+  title: "Reading Progress - Chinese Learning Fun!",
+  meta: [
+    {
+      name: "description",
+      content: "Track reading progress and view daily performance",
+    },
+  ],
+});
+
+// Supabase client
+const supabase = useSupabaseClient();
+
+// Reactive data
+const selectedDay = ref(null);
+const showDayDetails = ref(false);
+const progressData = ref({});
+const loading = ref(false);
+const error = ref(null);
+
+// Weekly functionality
+const currentWeekStart = ref(getWeekStart(new Date()));
+
+// Fetch progress data from database
+const fetchProgressData = async (startDate, endDate) => {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    // Fetch quiz results for the date range
+    const { data: quizResults, error: quizError } = await supabase
+      .from("quiz_results")
+      .select("*")
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .order("date", { ascending: true });
+
+    if (quizError) throw quizError;
+
+    // Transform data into the format expected by the UI
+    const transformedData = {};
+
+    quizResults.forEach((result) => {
+      const dateKey = result.date;
+      transformedData[dateKey] = {
+        wordsStudied: result.words_studied,
+        correctAnswers: result.correct_answers,
+        accuracy: parseFloat(result.accuracy),
+        score: result.score,
+        completed: result.completed,
+        words: result.words_data || [], // JSON data directly
+      };
+    });
+
+    progressData.value = transformedData;
+    console.log("✅ Progress data loaded successfully");
+  } catch (err) {
+    console.error("❌ Error fetching progress data:", err);
+    error.value = "Failed to load progress data. Please try again.";
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Save quiz result to database
+const saveQuizResult = async (quizData) => {
+  try {
+    // Prepare words data for JSON storage
+    const wordsData = quizData.words.map((word) => ({
+      chinese: word.chinese,
+      english: word.english,
+      correct: word.correct,
+    }));
+
+    // Insert or update quiz result (using upsert)
+    const { data, error: upsertError } = await supabase
+      .from("quiz_results")
+      .upsert(
+        {
+          date: quizData.date,
+          words_studied: quizData.wordsStudied,
+          correct_answers: quizData.correctAnswers,
+          accuracy: quizData.accuracy,
+          score: quizData.score,
+          completed: quizData.completed,
+          words_data: wordsData,
+        },
+        {
+          onConflict: "date", // Update if date already exists
+        }
+      )
+      .select();
+
+    if (upsertError) throw upsertError;
+
+    console.log("✅ Quiz result saved successfully");
+
+    // Refresh data after saving
+    await refreshCurrentWeekData();
+  } catch (err) {
+    console.error("❌ Error saving quiz result:", err);
+    throw err;
+  }
+};
+
+// Check if today's quiz is completed
+const isTodayQuizCompleted = computed(() => {
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return progressData.value[todayKey]?.completed || false;
+});
+
+const selectedDateFormatted = computed(() => {
+  if (!selectedDay.value) return "";
+
+  const dateKey = selectedDay.value.dateKey;
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+});
+
+const selectedDayData = computed(() => {
+  if (!selectedDay.value) return {};
+  const dateKey = selectedDay.value.dateKey;
+  return progressData.value[dateKey] || {};
+});
+
+const currentWeekRange = computed(() => {
+  const start = new Date(currentWeekStart.value);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  return `${start.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })} - ${end.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+});
+
+const weekDays = computed(() => {
+  const days = [];
+  const dayNamesShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(currentWeekStart.value);
+    date.setDate(date.getDate() + i);
+
+    const dateKey = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+    const dayObj = {
+      date: date.getDate(),
+      shortName: dayNamesShort[date.getDay()],
+      data: progressData.value[dateKey],
+      isToday: date.toDateString() === new Date().toDateString(),
+      dateKey: dateKey,
+      isSelected: selectedDay.value?.dateKey === dateKey,
+    };
+
+    days.push(dayObj);
+  }
+
+  return days;
+});
+
+const weeklyStats = computed(() => {
+  const weekData = weekDays.value.filter((day) => day.data);
+
+  if (weekData.length === 0) {
+    return {
+      totalWords: 0,
+      averageAccuracy: 0,
+      grade: "F",
+      daysActive: 0,
+    };
+  }
+
+  const totalWords = weekData.reduce(
+    (sum, day) => sum + (day.data.wordsStudied || 0),
+    0
+  );
+  const averageAccuracy = Math.round(
+    weekData.reduce((sum, day) => sum + (day.data.accuracy || 0), 0) /
+      weekData.length
+  );
+
+  const grade = calculateWeeklyGrade(averageAccuracy, weekData.length);
+
+  return {
+    totalWords,
+    averageAccuracy,
+    grade,
+    daysActive: weekData.length,
+  };
+});
+
+// Calculate weekly grade based on accuracy and days active
+const calculateWeeklyGrade = (averageAccuracy, daysActive) => {
+  if (daysActive === 0) return "F";
+
+  let baseGrade = "F";
+  if (averageAccuracy >= 95) baseGrade = "A+";
+  else if (averageAccuracy >= 90) baseGrade = "A";
+  else if (averageAccuracy >= 85) baseGrade = "A-";
+  else if (averageAccuracy >= 80) baseGrade = "B+";
+  else if (averageAccuracy >= 75) baseGrade = "B";
+  else if (averageAccuracy >= 70) baseGrade = "B-";
+  else if (averageAccuracy >= 65) baseGrade = "C+";
+  else if (averageAccuracy >= 60) baseGrade = "C";
+  else if (averageAccuracy >= 55) baseGrade = "C-";
+  else if (averageAccuracy >= 50) baseGrade = "D";
+
+  if (daysActive >= 6) {
+    return baseGrade;
+  } else if (daysActive >= 4) {
+    if (["A+", "A", "A-"].includes(baseGrade)) {
+      const gradeMap = { "A+": "A", A: "A-", "A-": "B+" };
+      return gradeMap[baseGrade];
+    }
+    return baseGrade;
+  } else if (daysActive >= 2) {
+    if (["A+", "A", "A-", "B+", "B"].includes(baseGrade)) {
+      return "C+";
+    } else if (["B-", "C+", "C"].includes(baseGrade)) {
+      return "C-";
+    }
+    return baseGrade;
+  } else {
+    return "D";
+  }
+};
+
+// Helper functions
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  return new Date(d.setDate(diff));
+}
+
+function formatDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+// Refresh current week data
+const refreshCurrentWeekData = async () => {
+  const start = new Date(currentWeekStart.value);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  await fetchProgressData(formatDate(start), formatDate(end));
+};
+
+const previousWeek = async () => {
+  const newStart = new Date(currentWeekStart.value);
+  newStart.setDate(newStart.getDate() - 7);
+  currentWeekStart.value = newStart;
+  selectedDay.value = null;
+  showDayDetails.value = false;
+
+  await refreshCurrentWeekData();
+};
+
+const nextWeek = async () => {
+  const newStart = new Date(currentWeekStart.value);
+  newStart.setDate(newStart.getDate() + 7);
+  currentWeekStart.value = newStart;
+  selectedDay.value = null;
+  showDayDetails.value = false;
+
+  await refreshCurrentWeekData();
+};
+
+const goToToday = async () => {
+  const today = new Date();
+  currentWeekStart.value = getWeekStart(today);
+
+  await refreshCurrentWeekData();
+
+  nextTick(() => {
+    const todayWeekDay = weekDays.value.find((day) => day.isToday);
+    if (todayWeekDay) {
+      selectedDay.value = todayWeekDay;
+      showDayDetails.value = true;
+    }
+  });
+};
+
+const toggleDaySelection = (day) => {
+  if (selectedDay.value?.dateKey === day.dateKey && showDayDetails.value) {
+    showDayDetails.value = false;
+    selectedDay.value = null;
+  } else {
+    selectedDay.value = day;
+    showDayDetails.value = true;
+  }
+};
+
+const getWeekDayClass = (day) => {
+  let classes = [];
+
+  if (day.isSelected) {
+    classes.push(
+      "border-4 border-gray-600",
+      "scale-105",
+      "bg-purple-100",
+      "z-10 relative",
+      "transform"
+    );
+  } else {
+    classes.push("border-2");
+
+    if (day.isToday) {
+      classes.push("border-blue-500 bg-blue-100");
+    } else if (day.data?.completed) {
+      classes.push("border-green-500 bg-green-100");
+    } else {
+      classes.push("border-gray-300 bg-gray-50");
+    }
+  }
+
+  return classes.join(" ");
+};
+
+// Expose saveQuizResult function globally so the quiz page can use it
+provide("saveQuizResult", saveQuizResult);
+
+// Load initial data
+onMounted(async () => {
+  await refreshCurrentWeekData();
+
+  nextTick(() => {
+    const todayWeekDay = weekDays.value.find((day) => day.isToday);
+    if (todayWeekDay) {
+      selectedDay.value = todayWeekDay;
+      showDayDetails.value = true;
+    }
+  });
+});
+</script>
+
+<style scoped>
+.pulse-slow {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.chinese-text {
+  font-family: "Noto Sans SC", "Source Han Sans", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+</style>
