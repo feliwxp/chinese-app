@@ -63,7 +63,7 @@
         <!-- Start Today's Practice Button -->
         <NuxtLink
           v-if="!isTodayPracticeCompleted"
-          to="/math/practice"
+          to="/quiz/math"
           class="inline-block bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 pulse-slow"
         >
           <span class="text-2xl md:text-3xl">🔢</span>
@@ -430,11 +430,50 @@ const supabase = useSupabaseClient();
 const selectedDay = ref(null);
 const showDayDetails = ref(false);
 const progressData = ref({});
+const todayProgressData = ref(null); // Store today's data separately
 const loading = ref(false);
 const error = ref(null);
 
 // Weekly functionality
 const currentWeekStart = ref(getWeekStart(new Date()));
+
+// Fetch today's progress data separately
+const fetchTodayProgressData = async () => {
+  try {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const { data: todayResult, error: todayError } = await supabase
+      .from("math_results")
+      .select("*")
+      .eq("date", todayKey)
+      .single();
+
+    if (todayError && todayError.code !== "PGRST116") {
+      // PGRST116 is "not found"
+      throw todayError;
+    }
+
+    if (todayResult) {
+      todayProgressData.value = {
+        questionsAttempted: todayResult.questions_attempted,
+        correctAnswers: todayResult.correct_answers,
+        accuracy: parseFloat(todayResult.accuracy),
+        score: todayResult.score,
+        completed: todayResult.completed,
+        timeSpent: todayResult.time_spent,
+        questions: todayResult.questions_data || [],
+      };
+    } else {
+      todayProgressData.value = null;
+    }
+  } catch (err) {
+    console.error("❌ Error fetching today's progress data:", err);
+    // Don't set error state for this, as it's not critical for the main UI
+  }
+};
 
 // Fetch progress data from database
 const fetchProgressData = async (startDate, endDate) => {
@@ -464,7 +503,7 @@ const fetchProgressData = async (startDate, endDate) => {
         score: result.score,
         completed: result.completed,
         timeSpent: result.time_spent,
-        questions: result.questions_data || [], // JSON data directly
+        questions: result.questions_data || [],
       };
     });
 
@@ -505,7 +544,7 @@ const saveMathResult = async (mathData) => {
           questions_data: questionsData,
         },
         {
-          onConflict: "date", // Update if date already exists
+          onConflict: "date",
         }
       )
       .select();
@@ -514,7 +553,10 @@ const saveMathResult = async (mathData) => {
 
     console.log("✅ Math result saved successfully");
 
-    // Refresh data after saving
+    // Refresh today's data after saving
+    await fetchTodayProgressData();
+
+    // Refresh current week data if today is in the current week
     await refreshCurrentWeekData();
   } catch (err) {
     console.error("❌ Error saving math result:", err);
@@ -522,13 +564,9 @@ const saveMathResult = async (mathData) => {
   }
 };
 
-// Check if today's practice is completed
+// Check if today's practice is completed - now uses separate today data
 const isTodayPracticeCompleted = computed(() => {
-  const today = new Date();
-  const todayKey = `${today.getFullYear()}-${String(
-    today.getMonth() + 1
-  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  return progressData.value[todayKey]?.completed || false;
+  return todayProgressData.value?.completed || false;
 });
 
 const selectedDateFormatted = computed(() => {
@@ -761,6 +799,10 @@ provide("saveMathResult", saveMathResult);
 
 // Load initial data
 onMounted(async () => {
+  // Fetch today's data first (for the practice button)
+  await fetchTodayProgressData();
+
+  // Then fetch the current week's data
   await refreshCurrentWeekData();
 
   nextTick(() => {

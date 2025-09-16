@@ -403,11 +403,49 @@ const supabase = useSupabaseClient();
 const selectedDay = ref(null);
 const showDayDetails = ref(false);
 const progressData = ref({});
+const todayQuizData = ref(null); // Store today's data separately
 const loading = ref(false);
 const error = ref(null);
 
 // Weekly functionality
 const currentWeekStart = ref(getWeekStart(new Date()));
+
+// Fetch today's quiz data separately
+const fetchTodayQuizData = async () => {
+  try {
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const { data: todayResult, error: todayError } = await supabase
+      .from("quiz_results")
+      .select("*")
+      .eq("date", todayKey)
+      .single();
+
+    if (todayError && todayError.code !== "PGRST116") {
+      // PGRST116 is "not found"
+      throw todayError;
+    }
+
+    if (todayResult) {
+      todayQuizData.value = {
+        wordsStudied: todayResult.words_studied,
+        correctAnswers: todayResult.correct_answers,
+        accuracy: parseFloat(todayResult.accuracy),
+        score: todayResult.score,
+        completed: todayResult.completed,
+        words: todayResult.words_data || [],
+      };
+    } else {
+      todayQuizData.value = null;
+    }
+  } catch (err) {
+    console.error("❌ Error fetching today's quiz data:", err);
+    // Don't set error state for this, as it's not critical for the main UI
+  }
+};
 
 // Fetch progress data from database
 const fetchProgressData = async (startDate, endDate) => {
@@ -483,7 +521,10 @@ const saveQuizResult = async (quizData) => {
 
     console.log("✅ Quiz result saved successfully");
 
-    // Refresh data after saving
+    // Refresh today's data after saving
+    await fetchTodayQuizData();
+
+    // Refresh current week data if today is in the current week
     await refreshCurrentWeekData();
   } catch (err) {
     console.error("❌ Error saving quiz result:", err);
@@ -491,13 +532,9 @@ const saveQuizResult = async (quizData) => {
   }
 };
 
-// Check if today's quiz is completed
+// Check if today's quiz is completed - now uses separate today data
 const isTodayQuizCompleted = computed(() => {
-  const today = new Date();
-  const todayKey = `${today.getFullYear()}-${String(
-    today.getMonth() + 1
-  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  return progressData.value[todayKey]?.completed || false;
+  return todayQuizData.value?.completed || false;
 });
 
 const selectedDateFormatted = computed(() => {
@@ -730,6 +767,10 @@ provide("saveQuizResult", saveQuizResult);
 
 // Load initial data
 onMounted(async () => {
+  // Fetch today's data first (for the quiz button)
+  await fetchTodayQuizData();
+
+  // Then fetch the current week's data
   await refreshCurrentWeekData();
 
   nextTick(() => {
