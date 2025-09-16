@@ -27,27 +27,52 @@
         </p>
       </div>
 
-      <!-- Single Settings Card -->
-      <div class="max-w-2xl mx-auto">
-        <div class="card-colorful text-center">
-          <div class="text-6xl md:text-8xl mb-4 md:mb-6">📚</div>
-          <h2
-            class="text-3xl md:text-4xl font-bold text-indigo-700 mb-4 md:mb-6"
-          >
-            Manage Study Words
-          </h2>
-          <p class="text-lg md:text-xl text-gray-600 mb-6 md:mb-8">
-            Add new words, edit existing ones, and customize the reading
-            practice list for Elsa.
-          </p>
+      <!-- Settings Cards -->
+      <div class="max-w-4xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          <!-- Manage Study Words Card -->
+          <div class="card-colorful text-center">
+            <div class="text-6xl md:text-8xl mb-4 md:mb-6">📚</div>
+            <h2
+              class="text-2xl md:text-3xl font-bold text-indigo-700 mb-4 md:mb-6"
+            >
+              Manage Study Words
+            </h2>
+            <p class="text-base md:text-lg text-gray-600 mb-6 md:mb-8">
+              Add new words, edit existing ones, and customize the reading
+              practice list for Elsa.
+            </p>
 
-          <NuxtLink
-            to="/settings/reading"
-            class="btn-primary text-xl md:text-2xl py-3 px-6 md:py-4 md:px-8 inline-flex items-center gap-3"
-          >
-            <span>⚙️</span>
-            Set Words
-          </NuxtLink>
+            <NuxtLink
+              to="/settings/reading"
+              class="btn-primary text-lg md:text-xl py-3 px-6 md:py-4 md:px-8 inline-flex items-center gap-3"
+            >
+              <span>⚙️</span>
+              Set Words
+            </NuxtLink>
+          </div>
+
+          <!-- Manage Math Questions Card -->
+          <div class="card-colorful text-center">
+            <div class="text-6xl md:text-8xl mb-4 md:mb-6">🧮</div>
+            <h2
+              class="text-2xl md:text-3xl font-bold text-blue-700 mb-4 md:mb-6"
+            >
+              Manage Math Questions
+            </h2>
+            <p class="text-base md:text-lg text-gray-600 mb-6 md:mb-8">
+              Add new math problems, edit existing ones, and customize the math
+              practice questions for Elsa.
+            </p>
+
+            <NuxtLink
+              to="/settings/math"
+              class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 inline-flex items-center gap-3"
+            >
+              <span>🔢</span>
+              Set Questions
+            </NuxtLink>
+          </div>
         </div>
       </div>
     </main>
