@@ -54,7 +54,7 @@
                   class="btn-primary flex items-center gap-2"
                 >
                   <span>🎮</span>
-                  Start Quiz
+                  Start Learning
                 </NuxtLink>
               </div>
             </div>
@@ -103,7 +103,7 @@
       </div>
 
       <!-- Fun Stats Section -->
-      <div class="max-w-xl mx-auto mt-16">
+      <!-- <div class="max-w-xl mx-auto mt-16">
         <div class="bg-white rounded-2xl shadow-xl p-6 border-4 border-rainbow">
           <h3
             class="text-2xl font-bold text-center text-purple-600 mb-4 flex items-center justify-center gap-2"
@@ -126,7 +126,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
     </main>
 
     <!-- Footer -->
