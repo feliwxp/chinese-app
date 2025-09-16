@@ -35,7 +35,7 @@
           Study Word Manager
         </h1>
         <p class="text-lg md:text-xl text-gray-700">
-          Add, edit, or remove words from Elsa's practice list
+          Add, edit, pause, or remove words from Elsa's practice list
         </p>
       </div>
 
@@ -131,6 +131,47 @@
         </div>
       </div>
 
+      <!-- Filter Tabs -->
+      <div class="max-w-6xl mx-auto mb-6">
+        <div class="flex justify-center">
+          <div class="bg-white rounded-xl p-1 shadow-lg">
+            <button
+              @click="filterStatus = 'all'"
+              :class="[
+                'px-4 py-2 rounded-lg font-semibold transition-all duration-200',
+                filterStatus === 'all'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100',
+              ]"
+            >
+              All ({{ words.length }})
+            </button>
+            <button
+              @click="filterStatus = 'active'"
+              :class="[
+                'px-4 py-2 rounded-lg font-semibold transition-all duration-200',
+                filterStatus === 'active'
+                  ? 'bg-green-500 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100',
+              ]"
+            >
+              Active ({{ activeWords.length }})
+            </button>
+            <button
+              @click="filterStatus = 'paused'"
+              :class="[
+                'px-4 py-2 rounded-lg font-semibold transition-all duration-200',
+                filterStatus === 'paused'
+                  ? 'bg-orange-500 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100',
+              ]"
+            >
+              Paused ({{ pausedWords.length }})
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Current Words List -->
       <div class="max-w-6xl mx-auto">
         <div class="bg-white rounded-2xl shadow-xl p-4 md:p-8">
@@ -142,9 +183,16 @@
             >
               <span>📖</span>
               <span class="hidden sm:inline"
-                >Current Study Words ({{ words.length }})</span
+                >{{
+                  filterStatus === "all"
+                    ? "All"
+                    : filterStatus === "active"
+                    ? "Active"
+                    : "Paused"
+                }}
+                Study Words ({{ filteredWords.length }})</span
               >
-              <span class="sm:hidden">Words ({{ words.length }})</span>
+              <span class="sm:hidden">Words ({{ filteredWords.length }})</span>
             </h2>
 
             <button
@@ -180,16 +228,35 @@
           </div>
 
           <!-- Words Grid -->
-          <div v-else-if="words.length > 0" class="grid gap-4 md:gap-6">
+          <div v-else-if="filteredWords.length > 0" class="grid gap-4 md:gap-6">
             <div
-              v-for="word in words"
+              v-for="word in filteredWords"
               :key="word.id"
-              class="border-2 border-gray-200 rounded-xl p-4 md:p-6 hover:border-green-300 transition-all duration-200"
+              :class="[
+                'border-2 rounded-xl p-4 md:p-6 transition-all duration-200',
+                word.status === 'paused'
+                  ? 'border-orange-200 bg-orange-50 hover:border-orange-300'
+                  : 'border-gray-200 hover:border-green-300',
+              ]"
             >
               <div
                 class="flex flex-col lg:flex-row lg:items-start justify-between gap-4"
               >
                 <div class="flex-1">
+                  <!-- Status Badge -->
+                  <div class="mb-2">
+                    <span
+                      :class="[
+                        'inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold',
+                        word.status === 'paused'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-green-100 text-green-800',
+                      ]"
+                    >
+                      {{ word.status === "paused" ? "⏸️ Paused" : "✅ Active" }}
+                    </span>
+                  </div>
+
                   <!-- Word Info -->
                   <div
                     class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4"
@@ -201,7 +268,12 @@
                         Chinese
                       </label>
                       <div
-                        class="text-2xl md:text-3xl font-bold text-green-600 chinese-text"
+                        :class="[
+                          'text-2xl md:text-3xl font-bold chinese-text',
+                          word.status === 'paused'
+                            ? 'text-orange-600'
+                            : 'text-green-600',
+                        ]"
                       >
                         {{ word.chinese }}
                       </div>
@@ -262,6 +334,18 @@
                     ✏️ Edit
                   </button>
                   <button
+                    @click="toggleWordStatus(word)"
+                    :disabled="loading"
+                    :class="[
+                      'font-bold py-2 px-3 md:px-4 rounded-full text-xs md:text-sm shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex-1 lg:flex-none',
+                      word.status === 'paused'
+                        ? 'bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white'
+                        : 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white',
+                    ]"
+                  >
+                    {{ word.status === "paused" ? "▶️ Resume" : "⏸️ Pause" }}
+                  </button>
+                  <button
                     @click="deleteWord(word)"
                     :disabled="loading"
                     class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-2 px-3 md:px-4 rounded-full text-xs md:text-sm shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex-1 lg:flex-none"
@@ -277,10 +361,18 @@
           <div v-else class="text-center py-8 md:py-12">
             <div class="text-4xl md:text-6xl mb-3 md:mb-4">📚</div>
             <p class="text-lg md:text-xl text-gray-600 mb-3 md:mb-4">
-              No words found
+              {{
+                filterStatus === "all"
+                  ? "No words found"
+                  : `No ${filterStatus} words found`
+              }}
             </p>
             <p class="text-gray-500">
-              Add your first word using the form above!
+              {{
+                filterStatus === "all"
+                  ? "Add your first word using the form above!"
+                  : `Try switching to a different filter or add new words.`
+              }}
             </p>
           </div>
         </div>
@@ -360,6 +452,22 @@
               </div>
             </div>
 
+            <!-- Status Selection -->
+            <div>
+              <label
+                class="block text-base md:text-lg font-semibold text-gray-700 mb-2"
+              >
+                Status
+              </label>
+              <select
+                v-model="editingWord.status"
+                class="w-full p-3 md:p-4 text-base md:text-lg border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none"
+              >
+                <option value="active">✅ Active</option>
+                <option value="paused">⏸️ Paused</option>
+              </select>
+            </div>
+
             <div
               class="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center"
             >
@@ -403,6 +511,7 @@ const words = ref([]);
 const loading = ref(false);
 const error = ref(null);
 const editingWord = ref(null);
+const filterStatus = ref("all");
 
 // New word form
 const newWord = ref({
@@ -413,6 +522,19 @@ const newWord = ref({
 });
 
 const supabase = useSupabaseClient();
+
+// Computed properties for filtering
+const activeWords = computed(() =>
+  words.value.filter((word) => word.status === "active")
+);
+const pausedWords = computed(() =>
+  words.value.filter((word) => word.status === "paused")
+);
+const filteredWords = computed(() => {
+  if (filterStatus.value === "active") return activeWords.value;
+  if (filterStatus.value === "paused") return pausedWords.value;
+  return words.value;
+});
 
 const fetchWords = async () => {
   loading.value = true;
@@ -449,6 +571,7 @@ const addWord = async () => {
         english: newWord.value.english,
         sample_sentence_chinese: newWord.value.sampleSentenceChinese || null,
         sample_sentence_english: newWord.value.sampleSentenceEnglish || null,
+        status: "active", // New words are active by default
       })
       .select();
 
@@ -503,6 +626,7 @@ const updateWord = async () => {
           editingWord.value.sample_sentence_chinese || null,
         sample_sentence_english:
           editingWord.value.sample_sentence_english || null,
+        status: editingWord.value.status || "active",
       })
       .eq("id", editingWord.value.id)
       .select();
@@ -519,6 +643,34 @@ const updateWord = async () => {
   } catch (err) {
     console.error("❌ Error updating word:", err);
     error.value = "Failed to update word. Please try again.";
+  } finally {
+    loading.value = false;
+  }
+};
+
+const toggleWordStatus = async (word) => {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const newStatus = word.status === "active" ? "paused" : "active";
+
+    const { error: updateError } = await supabase
+      .from("quiz_words")
+      .update({ status: newStatus })
+      .eq("id", word.id);
+
+    if (updateError) throw updateError;
+
+    // Refresh the words list to show the updated status
+    await fetchWords();
+
+    console.log(
+      `✅ Word ${newStatus === "paused" ? "paused" : "resumed"} successfully`
+    );
+  } catch (err) {
+    console.error("❌ Error updating word status:", err);
+    error.value = "Failed to update word status. Please try again.";
   } finally {
     loading.value = false;
   }

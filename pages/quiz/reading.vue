@@ -532,16 +532,16 @@ const loadQuizData = async () => {
     const { data: words, error: wordsError } = await supabase
       .from("quiz_words")
       .select("*")
+      .eq("status", "active") // Add this line to filter only active words
       .order("id");
 
     if (wordsError) throw wordsError;
 
     if (!words || words.length === 0) {
       throw new Error(
-        "No words found in database. Please add some words first."
+        "No active words found in database. Please add some words or activate existing words first." // Update error message
       );
     }
-
     quizWords.value = words;
     console.log(`✅ Loaded ${words.length} words from database`);
   } catch (err) {
