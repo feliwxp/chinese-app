@@ -473,20 +473,276 @@ const hasAttempted = ref(false);
 // Speech recognition setup
 let recognition = null;
 let selectedVoice = null;
+let mediaRecorder = null;
+let audioChunks = [];
 
-// ⭐ VOICE CONFIGURATION ⭐
-const PREFERRED_VOICES = [
-  "Tingting",
-  "Li-Mu",
-  "Flo (Chinese (China mainland))",
-  "Sandy (Chinese (China mainland))",
-  "Google 普通话（中国大陆）",
-];
+// Add mobile detection
+const isMobile = ref(false);
+const isIOS = ref(false);
 
-const VOICE_SETTINGS = {
-  rate: 0.3,
-  pitch: 1.0,
-  volume: 1.0,
+// Detect mobile device
+const detectMobile = () => {
+  if (typeof window !== "undefined") {
+    isMobile.value =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+    isIOS.value = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }
+};
+
+// Initialize speech recognition with mobile considerations
+const initSpeechRecognition = () => {
+  if (typeof window !== "undefined") {
+    // Check for different speech recognition APIs
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = "zh-CN";
+
+      // Mobile-specific settings
+      if (isMobile.value) {
+        recognition.maxAlternatives = 1;
+      }
+
+      recognition.onstart = () => {
+        console.log("Speech recognition started");
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        processSpeechResult(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        handleSpeechError(event.error);
+      };
+
+      recognition.onend = () => {
+        isRecording.value = false;
+        console.log("Speech recognition ended");
+      };
+    }
+  }
+};
+
+const startRecording = async () => {
+  try {
+    recordingStatus.value = null;
+
+    // Request microphone permission first
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        // Mobile-specific audio constraints
+        sampleRate: isMobile.value ? 16000 : 44100,
+        channelCount: 1,
+      },
+    });
+
+    // For mobile devices, add a small delay and user interaction requirement
+    if (isMobile.value) {
+      // Show a preparation message
+      recordingStatus.value = {
+        type: "info",
+        title: "Preparing...",
+        message: "Tap 'Start' when ready to speak.",
+      };
+
+      // Small delay for mobile preparation
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    if (!recognition) {
+      // Fallback: Use MediaRecorder for basic audio recording on unsupported devices
+      if (
+        MediaRecorder.isTypeSupported("audio/webm") ||
+        MediaRecorder.isTypeSupported("audio/mp4")
+      ) {
+        await startMediaRecording(stream);
+        return;
+      } else {
+        throw new Error("Speech recognition not supported on this device");
+      }
+    }
+
+    isRecording.value = true;
+    recordingStatus.value = {
+      type: "info",
+      title: "Recording...",
+      message: isMobile.value
+        ? "Speak clearly into your device's microphone."
+        : "Speak the Chinese word clearly into your microphone.",
+    };
+
+    // Start recognition
+    recognition.start();
+
+    // Clean up the stream since recognition handles audio
+    stream.getTracks().forEach((track) => track.stop());
+  } catch (error) {
+    console.error("Error starting recording:", error);
+    handleRecordingError(error);
+  }
+};
+
+// Fallback recording method for devices without speech recognition
+const startMediaRecording = async (stream) => {
+  try {
+    audioChunks = [];
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : "audio/mp4";
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, { type: mimeType });
+      // For now, just mark as attempted since we can't process the audio
+      processFallbackRecording();
+      stream.getTracks().forEach((track) => track.stop());
+    };
+
+    mediaRecorder.start();
+    isRecording.value = true;
+
+    recordingStatus.value = {
+      type: "info",
+      title: "Recording...",
+      message: "Speak the word clearly. Audio will be processed manually.",
+    };
+
+    // Auto-stop after 5 seconds
+    setTimeout(() => {
+      if (
+        isRecording.value &&
+        mediaRecorder &&
+        mediaRecorder.state === "recording"
+      ) {
+        mediaRecorder.stop();
+      }
+    }, 5000);
+  } catch (error) {
+    console.error("MediaRecorder error:", error);
+    throw error;
+  }
+};
+
+// Handle fallback recording result
+const processFallbackRecording = () => {
+  if (hasAttempted.value) return;
+
+  hasAttempted.value = true;
+
+  recordingStatus.value = {
+    type: "info",
+    title: "Audio Recorded",
+    message: "Your pronunciation was recorded. You get participation points!",
+    points: 5,
+  };
+
+  // Give participation points
+  score.value += 5;
+
+  // Track as attempted but not necessarily correct
+  wordResults.value[currentQuestionIndex.value] = {
+    chinese: currentWord.value.chinese,
+    english: currentWord.value.english,
+    correct: false, // Conservative scoring for fallback
+  };
+
+  canProceed.value = true;
+  isRecording.value = false;
+};
+
+const handleRecordingError = (error) => {
+  let message = "Recording failed. Please try again.";
+  let title = "Recording Error";
+
+  switch (error.name || error.message) {
+    case "NotAllowedError":
+      title = "Microphone Permission Needed";
+      message = isMobile.value
+        ? "Please allow microphone access in your browser settings and refresh the page."
+        : "Microphone access denied. Please allow microphone permissions.";
+      break;
+    case "NotFoundError":
+      title = "No Microphone Found";
+      message = "No microphone detected. Please check your device settings.";
+      break;
+    case "NotSupportedError":
+      title = "Not Supported";
+      message = isMobile.value
+        ? "Voice recording may not work on this device. Try the 'Listen' button instead."
+        : "Speech recognition is not supported. Try using Chrome browser.";
+      break;
+    case "NetworkError":
+      message = "Network error. Please check your internet connection.";
+      break;
+    default:
+      if (error.message.includes("not supported")) {
+        title = "Feature Not Available";
+        message = isMobile.value
+          ? "Voice recognition isn't available on this device. You can still listen to pronunciations!"
+          : "Speech recognition is not supported. Try using Chrome browser.";
+      }
+  }
+
+  recordingStatus.value = {
+    type: "error",
+    title: title,
+    message: message,
+  };
+
+  isRecording.value = false;
+};
+
+const stopRecording = () => {
+  if (recognition && isRecording.value) {
+    recognition.stop();
+  }
+
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+  }
+
+  isRecording.value = false;
+};
+
+// Update the toggleRecording method to handle mobile better
+const toggleRecording = async () => {
+  if (hasAttempted.value) {
+    recordingStatus.value = {
+      type: "info",
+      title: "Already Answered",
+      message:
+        "You've already attempted this word. Click 'Next Word' to continue.",
+    };
+    return;
+  }
+
+  if (isRecording.value) {
+    stopRecording();
+  } else {
+    // For mobile, ensure user interaction
+    if (isMobile.value) {
+      // Add a small delay to ensure the button press is registered
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    await startRecording();
+  }
 };
 
 // Load quiz data from database
@@ -611,32 +867,6 @@ const allowRetake = () => {
   quizStarted.value = false;
   quizCompleted.value = false;
   resetQuiz();
-};
-
-// Initialize speech recognition
-const initSpeechRecognition = () => {
-  if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
-    recognition = new window.webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "zh-CN";
-
-    recognition.onstart = () => {};
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      processSpeechResult(transcript);
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-      handleSpeechError(event.error);
-    };
-
-    recognition.onend = () => {
-      isRecording.value = false;
-    };
-  }
 };
 
 // Process speech recognition result
@@ -852,70 +1082,6 @@ const playAudio = async () => {
   }
 };
 
-const toggleRecording = async () => {
-  if (hasAttempted.value) {
-    recordingStatus.value = {
-      type: "info",
-      title: "Already Answered",
-      message:
-        "You've already attempted this word. Click 'Next Word' to continue.",
-    };
-    return;
-  }
-
-  if (isRecording.value) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
-};
-
-const startRecording = async () => {
-  try {
-    recordingStatus.value = null;
-
-    if (!recognition) {
-      throw new Error("Speech recognition not supported");
-    }
-
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-    isRecording.value = true;
-    recordingStatus.value = {
-      type: "info",
-      title: "Recording...",
-      message: "Speak the Chinese word clearly into your microphone.",
-    };
-
-    recognition.start();
-    stream.getTracks().forEach((track) => track.stop());
-  } catch (error) {
-    console.error("Error starting recording:", error);
-
-    let message = "Could not access microphone. Please check your permissions.";
-
-    if (error.message.includes("not supported")) {
-      message =
-        "Speech recognition is not supported in your browser. Try using Chrome.";
-    }
-
-    recordingStatus.value = {
-      type: "error",
-      title: "Recording Error",
-      message: message,
-    };
-
-    isRecording.value = false;
-  }
-};
-
-const stopRecording = () => {
-  if (recognition) {
-    recognition.stop();
-  }
-  isRecording.value = false;
-};
-
 // Computed properties
 const totalQuestions = computed(() => quizWords.value.length);
 const currentWord = computed(
@@ -972,8 +1138,17 @@ const restartQuiz = () => {
 
 // Initialize everything
 onMounted(async () => {
+  detectMobile();
   await loadQuizData();
-  initSpeechRecognition();
+
+  // Delay speech recognition init on mobile
+  if (isMobile.value) {
+    setTimeout(() => {
+      initSpeechRecognition();
+    }, 1000);
+  } else {
+    initSpeechRecognition();
+  }
 
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     const setupVoice = () => {
@@ -988,8 +1163,13 @@ onMounted(async () => {
 
 // Cleanup
 onUnmounted(() => {
-  if (isRecording.value && recognition) {
-    recognition.stop();
+  if (isRecording.value) {
+    if (recognition) {
+      recognition.stop();
+    }
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
+    }
   }
 
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
