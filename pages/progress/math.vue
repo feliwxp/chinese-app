@@ -56,28 +56,25 @@
         <h1 class="text-3xl md:text-5xl font-bold text-blue-600 mb-3 md:mb-4">
           Elsa's Math Journey
         </h1>
-        <p class="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
-          Track your math progress and keep solving!
-        </p>
+
+        <div class="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
+          <p v-if="!isTodayPracticeCompleted">
+            Track your math progress and keep solving!
+          </p>
+          <p v-else>Quiz Completed for the day. Click to try again!</p>
+        </div>
 
         <!-- Start Today's Practice Button -->
         <NuxtLink
-          v-if="!isTodayPracticeCompleted"
           to="/quiz/math"
           class="inline-block bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 pulse-slow"
         >
           <span class="text-2xl md:text-3xl">🔢</span>
-          <span class="ml-2">Start Practice!</span>
+          <span class="ml-2" v-if="!isTodayPracticeCompleted"
+            >Start Practice!</span
+          >
+          <span class="ml-2" v-else>Restart Quiz</span>
         </NuxtLink>
-
-        <div
-          v-else
-          class="inline-block bg-gray-400 text-gray-600 cursor-not-allowed font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-2xl shadow-lg"
-        >
-          <span class="text-2xl md:text-3xl">✅</span>
-          <span class="hidden sm:inline ml-2">Practice Completed!</span>
-          <span class="sm:hidden ml-2">Completed!</span>
-        </div>
       </div>
 
       <!-- Weekly Scores Overview -->
@@ -516,52 +513,6 @@ const fetchProgressData = async (startDate, endDate) => {
   }
 };
 
-// Save math result to database
-const saveMathResult = async (mathData) => {
-  try {
-    // Prepare questions data for JSON storage
-    const questionsData = mathData.questions.map((question) => ({
-      question: question.question,
-      answer: question.answer,
-      userAnswer: question.userAnswer,
-      correct: question.correct,
-      workShown: question.workShown,
-      explanation: question.explanation,
-    }));
-
-    // Insert or update math result (using upsert)
-    const { data, error: upsertError } = await supabase
-      .from("math_results")
-      .upsert(
-        {
-          date: mathData.date,
-          questions_attempted: mathData.questionsAttempted,
-          correct_answers: mathData.correctAnswers,
-          accuracy: mathData.accuracy,
-          score: mathData.score,
-          completed: mathData.completed,
-          time_spent: mathData.timeSpent,
-          questions_data: questionsData,
-        },
-        {
-          onConflict: "date",
-        }
-      )
-      .select();
-
-    if (upsertError) throw upsertError;
-
-    // Refresh today's data after saving
-    await fetchTodayProgressData();
-
-    // Refresh current week data if today is in the current week
-    await refreshCurrentWeekData();
-  } catch (err) {
-    console.error("❌ Error saving math result:", err);
-    throw err;
-  }
-};
-
 // Check if today's practice is completed - now uses separate today data
 const isTodayPracticeCompleted = computed(() => {
   return todayProgressData.value?.completed || false;
@@ -791,9 +742,6 @@ const getWeekDayClass = (day) => {
 
   return classes.join(" ");
 };
-
-// Expose saveMathResult function globally so the math practice page can use it
-provide("saveMathResult", saveMathResult);
 
 // Load initial data
 onMounted(async () => {

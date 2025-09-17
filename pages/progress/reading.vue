@@ -56,28 +56,22 @@
         <h1 class="text-3xl md:text-5xl font-bold text-blue-600 mb-3 md:mb-4">
           Elsa's Reading Journey
         </h1>
-        <p class="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
-          Track your progress and keep learning!
-        </p>
+        <div class="text-lg md:text-xl text-gray-700 mb-4 md:mb-6">
+          <p v-if="!isTodayQuizCompleted">
+            Track your progress and keep learning!
+          </p>
+          <p v-else>Quiz Completed for the day. Click to try again!</p>
+        </div>
 
         <!-- Start Today's Quiz Button -->
         <NuxtLink
-          v-if="!isTodayQuizCompleted"
           to="/quiz/reading"
           class="inline-block bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-2xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 pulse-slow"
         >
           <span class="text-2xl md:text-3xl">🎮</span>
-          <span class="ml-2">Start Quiz!</span>
+          <span class="ml-2" v-if="!isTodayQuizCompleted">Start Quiz!</span>
+          <span class="ml-2" v-else>Restart Quiz</span>
         </NuxtLink>
-
-        <div
-          v-else
-          class="inline-block bg-gray-400 text-gray-600 cursor-not-allowed font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-2xl shadow-lg"
-        >
-          <span class="text-2xl md:text-3xl">✅</span>
-          <span class="hidden sm:inline ml-2">Quiz Completed!</span>
-          <span class="sm:hidden ml-2">Completed!</span>
-        </div>
       </div>
 
       <!-- Weekly Scores Overview -->
@@ -487,48 +481,6 @@ const fetchProgressData = async (startDate, endDate) => {
   }
 };
 
-// Save quiz result to database
-const saveQuizResult = async (quizData) => {
-  try {
-    // Prepare words data for JSON storage
-    const wordsData = quizData.words.map((word) => ({
-      chinese: word.chinese,
-      english: word.english,
-      correct: word.correct,
-    }));
-
-    // Insert or update quiz result (using upsert)
-    const { data, error: upsertError } = await supabase
-      .from("quiz_results")
-      .upsert(
-        {
-          date: quizData.date,
-          words_studied: quizData.wordsStudied,
-          correct_answers: quizData.correctAnswers,
-          accuracy: quizData.accuracy,
-          score: quizData.score,
-          completed: quizData.completed,
-          words_data: wordsData,
-        },
-        {
-          onConflict: "date", // Update if date already exists
-        }
-      )
-      .select();
-
-    if (upsertError) throw upsertError;
-
-    // Refresh today's data after saving
-    await fetchTodayQuizData();
-
-    // Refresh current week data if today is in the current week
-    await refreshCurrentWeekData();
-  } catch (err) {
-    console.error("❌ Error saving quiz result:", err);
-    throw err;
-  }
-};
-
 // Check if today's quiz is completed - now uses separate today data
 const isTodayQuizCompleted = computed(() => {
   return todayQuizData.value?.completed || false;
@@ -758,9 +710,6 @@ const getWeekDayClass = (day) => {
 
   return classes.join(" ");
 };
-
-// Expose saveQuizResult function globally so the quiz page can use it
-provide("saveQuizResult", saveQuizResult);
 
 // Load initial data
 onMounted(async () => {

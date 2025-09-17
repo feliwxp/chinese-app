@@ -701,33 +701,10 @@ const saveMathResults = async (mathData) => {
     };
 
     if (existingResult) {
-      // Calculate new accuracy based on combined results
-      const totalAttempted =
-        existingResult.questions_attempted + mathData.questionsAttempted;
-      const totalCorrect =
-        existingResult.correct_answers + mathData.correctAnswers;
-      const newAccuracy =
-        totalAttempted > 0
-          ? Math.round((totalCorrect / totalAttempted) * 100)
-          : 0;
-
-      // Update existing record
+      // Replace existing record with latest results
       const { error: updateError } = await supabase
         .from("math_results")
-        .update({
-          questions_attempted: totalAttempted,
-          correct_answers: totalCorrect,
-          accuracy: newAccuracy,
-          score: existingResult.score + mathData.score,
-          time_spent: existingResult.time_spent + mathData.timeSpent,
-          completed: mathData.completed,
-          // Merge questions data
-          questions_data: [
-            ...(existingResult.questions_data || []),
-            ...mathData.questions,
-          ],
-          updated_at: new Date().toISOString(),
-        })
+        .update(resultData)
         .eq("date", localDate);
 
       if (updateError) throw updateError;
