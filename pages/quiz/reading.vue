@@ -279,12 +279,23 @@
                 hasAttempted
                   ? "Already Attempted"
                   : isRecording
-                  ? "Stop Recording"
+                  ? "Submit Recording"
                   : "Record Yourself"
               }}</span>
               <span class="sm:hidden">{{
                 hasAttempted ? "Done" : isRecording ? "Stop" : "Record"
               }}</span>
+            </button>
+
+            <!-- Add Restart Recording Button (only show while recording) -->
+            <button
+              v-if="isRecording && !hasAttempted"
+              @click="restartRecording"
+              class="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center gap-2 justify-center"
+            >
+              <span>🔄</span>
+              <span class="hidden sm:inline">Restart Recording</span>
+              <span class="sm:hidden">Restart</span>
             </button>
 
             <!-- Hint Button -->
@@ -646,16 +657,20 @@ const initSpeechRecognition = () => {
   if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
     recognition = new window.webkitSpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true; // Change to true to see interim results
+    recognition.interimResults = true;
     recognition.lang = "zh-CN";
+
+    // Store the transcript temporarily
+    let currentTranscript = "";
 
     recognition.onstart = () => {
       console.log("Speech recognition started");
+      currentTranscript = ""; // Reset transcript
       recordingStatus.value = {
         type: "info",
         title: "Listening...",
         message:
-          "Say the word clearly and click on 'Stop Recording' after speaking.",
+          "Say the word clearly. Use 'Stop Recording' when done or 'Restart Recording' to try again.",
       };
     };
 
@@ -679,22 +694,21 @@ const initSpeechRecognition = () => {
         }
       }
 
-      // Show interim results to user
-      if (interimTranscript && !finalTranscript) {
+      // Update current transcript but don't process yet
+      if (finalTranscript) {
+        currentTranscript = finalTranscript.trim();
+      }
+
+      // Show interim results to user without processing
+      const displayText = finalTranscript || interimTranscript;
+      if (displayText && isRecording.value) {
+        const displayPinyin = convertToPinyin(displayText);
+        const properPinyin = convertPinyinToToneMarks(displayPinyin);
         recordingStatus.value = {
           type: "info",
           title: "Hearing...",
-          message: `I'm hearing: "${interimTranscript}" - keep speaking or click stop.`,
+          message: `I'm hearing: "${properPinyin}" - Submit when ready or Restart to try again.`,
         };
-      }
-
-      // Process final result
-      if (finalTranscript.trim()) {
-        console.log("🎯 Final transcript:", finalTranscript);
-        if (recognition && isRecording.value) {
-          recognition.stop();
-        }
-        processSpeechResult(finalTranscript.trim());
       }
     };
 
@@ -706,7 +720,7 @@ const initSpeechRecognition = () => {
           type: "info",
           title: "No Speech Detected",
           message:
-            "Try speaking louder, closer to the microphone, or in a quieter environment.",
+            "Try speaking louder, closer to the microphone, or restart recording.",
         };
         return;
       }
@@ -716,13 +730,20 @@ const initSpeechRecognition = () => {
 
     recognition.onend = () => {
       console.log("Speech recognition ended");
-      isRecording.value = false;
 
-      // Only show error if we haven't processed any result
-      if (
-        !recordingStatus.value ||
-        recordingStatus.value.title === "Listening..."
+      // Only process the result if the user manually stopped recording (not restarted)
+      if (currentTranscript && !isRecording.value && !isRestarting.value) {
+        console.log(
+          "🎯 Processing transcript on user stop:",
+          currentTranscript
+        );
+        processSpeechResult(currentTranscript);
+      } else if (
+        !currentTranscript &&
+        !isRecording.value &&
+        !isRestarting.value
       ) {
+        // Only show error if we haven't processed any result and user stopped (not restarted)
         recordingStatus.value = {
           type: "error",
           title: "No Clear Speech Detected",
@@ -730,8 +751,55 @@ const initSpeechRecognition = () => {
             "Please speak more clearly and try again. Make sure you're in a quiet environment.",
         };
       }
+
+      // Reset restart flag
+      isRestarting.value = false;
     };
   }
+};
+
+// Add restart flag
+const isRestarting = ref(false);
+
+// Convert numbered pinyin to proper tone marks
+const convertPinyinToToneMarks = (numberedPinyin) => {
+  const toneMap = {
+    a1: "ā",
+    a2: "á",
+    a3: "ǎ",
+    a4: "à",
+    o1: "ō",
+    o2: "ó",
+    o3: "ǒ",
+    o4: "ò",
+    e1: "ē",
+    e2: "é",
+    e3: "ě",
+    e4: "è",
+    i1: "ī",
+    i2: "í",
+    i3: "ǐ",
+    i4: "ì",
+    u1: "ū",
+    u2: "ú",
+    u3: "ǔ",
+    u4: "ù",
+    ü1: "ǖ",
+    ü2: "ǘ",
+    ü3: "ǚ",
+    ü4: "ǜ",
+    v1: "ǖ",
+    v2: "ǘ",
+    v3: "ǚ",
+    v4: "ǜ",
+  };
+
+  return numberedPinyin
+    .replace(/([aeiouüv])([1-4])/g, (match, vowel, tone) => {
+      const key = vowel + tone;
+      return toneMap[key] || match;
+    })
+    .replace(/([1-4])/g, ""); // Remove any remaining numbers
 };
 
 // Process speech recognition result
@@ -782,14 +850,20 @@ const processSpeechResult = (transcript) => {
       recordingStatus.value = {
         type: "success",
         title: "Perfect pronunciation!",
-        message: `You said "${transcript}" (${transcriptPinyin}) - that's exactly right! 🎉`,
+        message: `You said ${convertPinyinToToneMarks(
+          transcriptPinyin
+        )} - that's exactly right! 🎉`,
         points: points,
       };
     } else {
       recordingStatus.value = {
         type: "success",
         title: "Great pronunciation!",
-        message: `You said "${transcript}" (${transcriptPinyin}) - close enough! The exact pronunciation is "${currentChinese}" (${correctPinyin}). 🎉`,
+        message: `You said ${convertPinyinToToneMarks(
+          transcriptPinyin
+        )} - close enough! The exact pronunciation is ${convertPinyinToToneMarks(
+          correctPinyin
+        )}. 🎉`,
         points: points,
       };
     }
@@ -798,7 +872,11 @@ const processSpeechResult = (transcript) => {
     recordingStatus.value = {
       type: "error",
       title: "Try again next time!",
-      message: `I heard "${transcript}" (${transcriptPinyin}). The correct pronunciation is "${currentChinese}" (${correctPinyin}).`,
+      message: `I heard ${convertPinyinToToneMarks(
+        transcriptPinyin
+      )}. The correct pronunciation is ${convertPinyinToToneMarks(
+        correctPinyin
+      )}.`,
     };
   }
 
@@ -1084,6 +1162,13 @@ const startRecording = async () => {
       return;
     }
 
+    // Stop any existing recognition first
+    if (isRecording.value) {
+      recognition.stop();
+      isRecording.value = false;
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay
+    }
+
     // Request microphone permission explicitly
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1116,8 +1201,6 @@ const startRecording = async () => {
     };
 
     recognition.start();
-
-    // REMOVED: No automatic timeout - user controls when to stop
   } catch (error) {
     console.error("Error starting recording:", error);
     recordingStatus.value = {
@@ -1132,10 +1215,64 @@ const startRecording = async () => {
 
 const stopRecording = () => {
   if (recognition) {
-    recognition.stop();
+    try {
+      if (isRecording.value) {
+        isRecording.value = false; // Set this first
+        recognition.stop(); // This will trigger onend which will process the result
+      }
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      isRecording.value = false;
+    }
   }
-  isRecording.value = false;
 };
+
+// Add restart recording function
+const restartRecording = () => {
+  if (recognition) {
+    try {
+      isRestarting.value = true; // Flag that this is a restart, not a stop
+
+      if (isRecording.value) {
+        recognition.stop(); // Stop current recording
+        isRecording.value = false;
+      }
+
+      // Start new recording after a brief delay
+      setTimeout(() => {
+        if (!hasAttempted.value && isRestarting.value) {
+          // Make sure user hasn't attempted yet and this is still a restart
+          startRecording();
+        }
+        isRestarting.value = false; // Reset restart flag
+      }, 200);
+    } catch (error) {
+      console.error("Error restarting recording:", error);
+      isRecording.value = false;
+      isRestarting.value = false;
+    }
+  }
+};
+
+// ...existing code...
+
+// Cleanup - also update this to ensure everything stops
+onUnmounted(() => {
+  if (recognition) {
+    try {
+      if (isRecording.value) {
+        recognition.stop();
+      }
+      isRecording.value = false;
+    } catch (error) {
+      console.error("Error cleaning up recognition:", error);
+    }
+  }
+
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+});
 
 // Computed properties
 const totalQuestions = computed(() => quizWords.value.length);
