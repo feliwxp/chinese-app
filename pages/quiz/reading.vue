@@ -264,9 +264,9 @@
             <!-- Record Button -->
             <button
               @click="toggleRecording"
-              :disabled="hasAttempted"
+              :disabled="hasAttempted || isProcessing"
               :class="[
-                hasAttempted
+                hasAttempted || isProcessing
                   ? 'from-gray-400 to-gray-500 cursor-not-allowed'
                   : isRecording
                   ? 'from-red-400 to-red-500 hover:from-red-500 hover:to-red-600'
@@ -274,22 +274,30 @@
               ]"
               class="bg-gradient-to-r text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 flex items-center gap-2 justify-center"
             >
-              <span>{{ isRecording ? "⏹️" : "🎤" }}</span>
+              <span>{{ isProcessing ? "⚙️" : isRecording ? "⏹️" : "🎤" }}</span>
               <span class="hidden sm:inline">{{
-                hasAttempted
+                isProcessing
+                  ? "Processing..."
+                  : hasAttempted
                   ? "Already Attempted"
                   : isRecording
                   ? "Submit Recording"
                   : "Record Yourself"
               }}</span>
               <span class="sm:hidden">{{
-                hasAttempted ? "Done" : isRecording ? "Stop" : "Record"
+                isProcessing
+                  ? "Wait"
+                  : hasAttempted
+                  ? "Done"
+                  : isRecording
+                  ? "Stop"
+                  : "Record"
               }}</span>
             </button>
 
-            <!-- Add Restart Recording Button (only show while recording) -->
+            <!-- Add Restart Recording Button (only show while recording and not processing) -->
             <button
-              v-if="isRecording && !hasAttempted"
+              v-if="isRecording && !hasAttempted && !isProcessing"
               @click="restartRecording"
               class="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 flex items-center gap-2 justify-center"
             >
@@ -509,6 +517,9 @@ const recordingStatus = ref(null);
 const canProceed = ref(false);
 const hasAttempted = ref(false);
 
+// Add processing state
+const isProcessing = ref(false);
+
 // Speech recognition setup
 let recognition = null;
 let selectedVoice = null;
@@ -669,8 +680,7 @@ const initSpeechRecognition = () => {
       recordingStatus.value = {
         type: "info",
         title: "Listening...",
-        message:
-          "Say the word clearly. Use 'Stop Recording' when done or 'Restart Recording' to try again.",
+        message: "Say the word clearly. Listening...",
       };
     };
 
@@ -682,10 +692,13 @@ const initSpeechRecognition = () => {
       let interimTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
+        const transcript = event.results[i][0].transcript.trim();
         console.log(
           `Result ${i}: "${transcript}" (confidence: ${event.results[i][0].confidence}, final: ${event.results[i].isFinal})`
         );
+
+        // Skip empty transcripts
+        if (!transcript) continue;
 
         if (event.results[i].isFinal) {
           finalTranscript += transcript;
@@ -699,7 +712,7 @@ const initSpeechRecognition = () => {
         currentTranscript = finalTranscript.trim();
       }
 
-      // Show interim results to user without processing
+      // Show interim results to user without processing (only if not empty)
       const displayText = finalTranscript || interimTranscript;
       if (displayText && isRecording.value) {
         const displayPinyin = convertToPinyin(displayText);
@@ -731,15 +744,20 @@ const initSpeechRecognition = () => {
     recognition.onend = () => {
       console.log("Speech recognition ended");
 
-      // Only process the result if the user manually stopped recording (not restarted)
-      if (currentTranscript && !isRecording.value && !isRestarting.value) {
+      // Only process the result if the user manually stopped recording (not restarted) AND we have valid content
+      if (
+        currentTranscript &&
+        currentTranscript.trim() &&
+        !isRecording.value &&
+        !isRestarting.value
+      ) {
         console.log(
           "🎯 Processing transcript on user stop:",
           currentTranscript
         );
         processSpeechResult(currentTranscript);
       } else if (
-        !currentTranscript &&
+        (!currentTranscript || !currentTranscript.trim()) &&
         !isRecording.value &&
         !isRestarting.value
       ) {
@@ -794,12 +812,75 @@ const convertPinyinToToneMarks = (numberedPinyin) => {
     v4: "ǜ",
   };
 
+  // Function to apply tone mark to the correct vowel in a syllable
+  const applyToneToSyllable = (syllable, tone) => {
+    if (!tone || tone < 1 || tone > 4) return syllable;
+
+    // Tone marking rules for Pinyin:
+    // 1. If there's 'a' or 'e', mark it
+    // 2. If there's 'ou', mark the 'o'
+    // 3. Otherwise, mark the last vowel
+
+    // Convert v to ü for processing
+    let processedSyllable = syllable.replace(/v/g, "ü");
+
+    // Rule 1: Mark 'a' or 'e' if present
+    if (processedSyllable.includes("a")) {
+      const key = "a" + tone;
+      return processedSyllable.replace("a", toneMap[key] || "a");
+    }
+    if (processedSyllable.includes("e")) {
+      const key = "e" + tone;
+      return processedSyllable.replace("e", toneMap[key] || "e");
+    }
+
+    // Rule 2: Mark 'o' in 'ou'
+    if (processedSyllable.includes("ou")) {
+      const key = "o" + tone;
+      return processedSyllable.replace("o", toneMap[key] || "o");
+    }
+
+    // Rule 3: Mark the last vowel
+    const vowels = ["i", "u", "ü", "o"];
+    for (let i = vowels.length - 1; i >= 0; i--) {
+      const vowel = vowels[i];
+      if (processedSyllable.includes(vowel)) {
+        const key = vowel + tone;
+        // Only replace the last occurrence of this vowel
+        const lastIndex = processedSyllable.lastIndexOf(vowel);
+        if (lastIndex !== -1) {
+          return (
+            processedSyllable.substring(0, lastIndex) +
+            (toneMap[key] || vowel) +
+            processedSyllable.substring(lastIndex + 1)
+          );
+        }
+      }
+    }
+
+    return processedSyllable;
+  };
+
+  // Split into words, then syllables
   return numberedPinyin
-    .replace(/([aeiouüv])([1-4])/g, (match, vowel, tone) => {
-      const key = vowel + tone;
-      return toneMap[key] || match;
+    .split(/\s+/)
+    .map((word) => {
+      // Handle syllables with tone numbers at the end
+      const match = word.match(/^(.+?)([1-4])$/);
+      if (match) {
+        const [, syllable, tone] = match;
+        return applyToneToSyllable(syllable, parseInt(tone));
+      }
+
+      // Handle syllables with tone numbers attached to vowels (existing logic)
+      return word
+        .replace(/([aeiouüv])([1-4])/g, (match, vowel, tone) => {
+          const key = vowel + tone;
+          return toneMap[key] || match;
+        })
+        .replace(/[1-4]/g, ""); // Remove any remaining numbers
     })
-    .replace(/([1-4])/g, ""); // Remove any remaining numbers
+    .join(" ");
 };
 
 // Process speech recognition result
@@ -813,6 +894,14 @@ const processSpeechResult = (transcript) => {
     };
     return;
   }
+
+  // Start processing
+  isProcessing.value = true;
+  recordingStatus.value = {
+    type: "info",
+    title: "Processing...",
+    message: "Analyzing your pronunciation, please wait...",
+  };
 
   const currentChinese = currentWord.value.chinese;
 
@@ -830,8 +919,9 @@ const processSpeechResult = (transcript) => {
   const similarity = calculatePinyinSimilarity(transcriptPinyin, correctPinyin);
   console.log("📊 Pinyin similarity:", similarity);
 
-  const isCorrect = similarity > 0.8; // Keep your current threshold
+  const isCorrect = similarity > 0.8;
   hasAttempted.value = true;
+  isProcessing.value = false;
 
   // Track this word's result
   wordResults.value[currentQuestionIndex.value] = {
@@ -1131,12 +1221,13 @@ const playAudio = async () => {
 };
 
 const toggleRecording = async () => {
-  if (hasAttempted.value) {
+  if (hasAttempted.value || isProcessing.value) {
     recordingStatus.value = {
       type: "info",
-      title: "Already Answered",
-      message:
-        "You've already attempted this word. Click 'Next Word' to continue.",
+      title: isProcessing.value ? "Processing..." : "Already Answered",
+      message: isProcessing.value
+        ? "Please wait while we analyze your pronunciation."
+        : "You've already attempted this word. Click 'Next Word' to continue.",
     };
     return;
   }
@@ -1238,6 +1329,8 @@ const restartRecording = () => {
         isRecording.value = false;
       }
 
+      recordingStatus.value = null;
+
       // Start new recording after a brief delay
       setTimeout(() => {
         if (!hasAttempted.value && isRestarting.value) {
@@ -1250,11 +1343,10 @@ const restartRecording = () => {
       console.error("Error restarting recording:", error);
       isRecording.value = false;
       isRestarting.value = false;
+      recordingStatus.value = null; // Reset status on error too
     }
   }
 };
-
-// ...existing code...
 
 // Cleanup - also update this to ensure everything stops
 onUnmounted(() => {
@@ -1306,6 +1398,7 @@ const resetQuestionState = () => {
   isRecording.value = false;
   isPlaying.value = false;
   hasAttempted.value = false;
+  isProcessing.value = false; // Reset processing state
 };
 
 const nextQuestion = () => {
