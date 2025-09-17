@@ -472,6 +472,8 @@ useHead({
   ],
 });
 
+import pinyin from "pinyin";
+
 // Supabase client
 const supabase = useSupabaseClient();
 
@@ -639,93 +641,19 @@ const allowRetake = () => {
   resetQuiz();
 };
 
-// Initialize speech recognition with better settings for Chinese
+// Initialize speech recognition
 const initSpeechRecognition = () => {
   if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
     recognition = new window.webkitSpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = true; // Enable interim results for better single character detection
+    recognition.interimResults = false;
     recognition.lang = "zh-CN";
-    recognition.maxAlternatives = 10; // Increase alternatives for single characters
-    recognition.timeout = 10000; // Longer timeout for single characters
 
-    recognition.onstart = () => {
-      console.log("Speech recognition started for:", currentWord.value.chinese);
-    };
+    recognition.onstart = () => {};
 
     recognition.onresult = (event) => {
-      console.log("Full speech recognition results:", event.results);
-
-      // Collect all results including interim ones
-      const allTranscripts = [];
-
-      // Process all result items
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-
-        // For each result, get all alternatives
-        for (let j = 0; j < result.length; j++) {
-          const alternative = result[j];
-          const transcript = alternative.transcript.trim();
-          const confidence = alternative.confidence || 0;
-          const isFinal = result.isFinal;
-
-          if (transcript) {
-            allTranscripts.push({
-              text: transcript,
-              confidence: confidence,
-              isFinal: isFinal,
-            });
-
-            console.log(
-              `Result ${i}, Alt ${j}: "${transcript}" (confidence: ${confidence}, final: ${isFinal})`
-            );
-          }
-        }
-      }
-
-      // If we have final results, process them immediately
-      const finalResults = allTranscripts.filter((t) => t.isFinal);
-      if (finalResults.length > 0) {
-        console.log("Processing final results:", finalResults);
-        processSpeechResult(finalResults[0].text, finalResults);
-        return;
-      }
-
-      // For single characters, also consider interim results if they seem confident
-      const currentChinese = currentWord.value.chinese;
-      if (currentChinese.length === 1 && allTranscripts.length > 0) {
-        // Sort by confidence and look for matches
-        const sortedTranscripts = allTranscripts.sort(
-          (a, b) => (b.confidence || 0) - (a.confidence || 0)
-        );
-
-        for (const transcript of sortedTranscripts) {
-          // If we find an exact match or high confidence interim result, use it
-          if (
-            transcript.text === currentChinese ||
-            (transcript.confidence && transcript.confidence > 0.7) ||
-            transcript.text.includes(currentChinese)
-          ) {
-            console.log(
-              "Using interim result for single character:",
-              transcript
-            );
-            processSpeechResult(transcript.text, sortedTranscripts);
-            return;
-          }
-        }
-      }
-    };
-
-    recognition.onspeechend = () => {
-      console.log("Speech ended - processing any available results");
-      // Give it a moment to finalize results
-      setTimeout(() => {
-        if (isRecording.value) {
-          recognition.stop();
-        }
-      }, 500);
+      const transcript = event.results[0][0].transcript;
+      processSpeechResult(transcript);
     };
 
     recognition.onerror = (event) => {
@@ -735,13 +663,12 @@ const initSpeechRecognition = () => {
 
     recognition.onend = () => {
       isRecording.value = false;
-      console.log("Speech recognition ended");
     };
   }
 };
 
-// Enhanced speech result processing with better single character handling
-const processSpeechResult = (transcript, alternatives = []) => {
+// Process speech recognition result
+const processSpeechResult = (transcript) => {
   if (hasAttempted.value) {
     recordingStatus.value = {
       type: "info",
@@ -753,64 +680,22 @@ const processSpeechResult = (transcript, alternatives = []) => {
   }
 
   const currentChinese = currentWord.value.chinese;
-  console.log("Target word:", currentChinese);
-  console.log("Primary transcript:", transcript);
-  console.log("All alternatives:", alternatives);
 
-  // Try the primary transcript first
-  let bestSimilarity = calculateSimilarity(transcript, currentChinese);
-  let bestMatch = transcript;
+  // Convert both to pinyin for comparison
+  const transcriptPinyin = convertToPinyin(transcript);
+  const correctPinyin = convertToPinyin(currentChinese);
 
-  // Check all alternatives for better matches
-  if (alternatives.length > 0) {
-    for (const alt of alternatives) {
-      const similarity = calculateSimilarity(alt.text, currentChinese);
-      console.log(
-        `Checking alternative "${alt.text}": similarity ${similarity}`
-      );
+  console.log("🎯 Pinyin comparison:", {
+    transcript,
+    transcriptPinyin,
+    currentChinese,
+    correctPinyin,
+  });
 
-      if (similarity > bestSimilarity) {
-        bestSimilarity = similarity;
-        bestMatch = alt.text;
-      }
-    }
-  }
+  const similarity = calculatePinyinSimilarity(transcriptPinyin, correctPinyin);
+  console.log("📊 Pinyin similarity:", similarity);
 
-  // Special handling for single characters - be more aggressive in finding matches
-  if (currentChinese.length === 1) {
-    // Check if any alternative contains the target character
-    for (const alt of alternatives) {
-      if (alt.text.includes(currentChinese)) {
-        bestSimilarity = Math.max(bestSimilarity, 0.9);
-        bestMatch = alt.text;
-        console.log(
-          `Found target character "${currentChinese}" in "${alt.text}"`
-        );
-        break;
-      }
-    }
-
-    // Also check the primary transcript
-    if (transcript.includes(currentChinese)) {
-      bestSimilarity = Math.max(bestSimilarity, 0.9);
-      bestMatch = transcript;
-      console.log(
-        `Found target character "${currentChinese}" in primary transcript "${transcript}"`
-      );
-    }
-  }
-
-  console.log(`Best match: "${bestMatch}" with similarity: ${bestSimilarity}`);
-
-  // Adjust threshold based on word length - be more lenient for single characters
-  let threshold = 0.7;
-  if (currentChinese.length === 1) {
-    threshold = 0.4; // Very lenient for single characters
-  } else if (currentChinese.length === 2) {
-    threshold = 0.6;
-  }
-
-  const isCorrect = bestSimilarity >= threshold;
+  const isCorrect = similarity > 0.7;
   hasAttempted.value = true;
 
   // Track this word's result
@@ -828,135 +713,125 @@ const processSpeechResult = (transcript, alternatives = []) => {
     recordingStatus.value = {
       type: "success",
       title: "Great pronunciation!",
-      message: `You said "${bestMatch}" - ${
-        bestSimilarity >= 0.9 ? "perfect" : "close enough"
-      }! 🎉`,
+      message: `You said "${transcript}" (${transcriptPinyin}) - that's correct! 🎉`,
       points: points,
     };
   } else {
     recordingStatus.value = {
       type: "error",
       title: "Try again next time!",
-      message: `I heard "${bestMatch}". The correct pronunciation is "${currentChinese}". (Similarity: ${Math.round(
-        bestSimilarity * 100
-      )}%)`,
+      message: `I heard "${transcript}" (${transcriptPinyin}). The correct pronunciation is "${currentChinese}" (${correctPinyin}).`,
     };
   }
 
   canProceed.value = true;
 };
 
-// Improved similarity calculation for Chinese characters
-const calculateSimilarity = (str1, str2) => {
-  if (!str1 || !str2) return 0;
+// Convert Chinese text to pinyin
+const convertToPinyin = (chineseText) => {
+  try {
+    // Convert to pinyin with tone numbers, without spaces
+    const pinyinArray = pinyin(chineseText, {
+      style: pinyin.STYLE_TONE2, // Use tone numbers (e.g., "ni3 hao3")
+      heteronym: false, // Don't return multiple pronunciations
+      segment: false, // Don't segment
+    });
 
-  const s1 = str1.replace(/\s/g, "").toLowerCase().trim();
-  const s2 = str2.replace(/\s/g, "").toLowerCase().trim();
+    // Join all pinyin syllables with spaces
+    return pinyinArray
+      .map((syllable) => syllable[0])
+      .join(" ")
+      .toLowerCase();
+  } catch (error) {
+    console.error("Error converting to pinyin:", error);
+    return chineseText.toLowerCase();
+  }
+};
 
-  console.log(`Comparing: "${s1}" vs "${s2}"`);
+// Calculate similarity between pinyin strings
+const calculatePinyinSimilarity = (pinyin1, pinyin2) => {
+  const p1 = pinyin1.trim().toLowerCase();
+  const p2 = pinyin2.trim().toLowerCase();
 
   // Exact match
-  if (s1 === s2) return 1.0;
+  if (p1 === p2) return 1.0;
 
-  // For single character targets, check if it's contained in the recognition
-  if (s2.length === 1) {
-    // Direct character match
-    if (s1.includes(s2)) {
-      console.log("Single character found in transcript");
-      return 0.9;
+  // Split into syllables for comparison
+  const syllables1 = p1.split(/\s+/).filter((s) => s.length > 0);
+  const syllables2 = p2.split(/\s+/).filter((s) => s.length > 0);
+
+  // If different number of syllables, lower similarity
+  if (syllables1.length !== syllables2.length) {
+    // Still calculate similarity but penalize length difference
+    const maxLength = Math.max(syllables1.length, syllables2.length);
+    const lengthPenalty =
+      Math.abs(syllables1.length - syllables2.length) / maxLength;
+    return Math.max(0, calculateLevenshteinSimilarity(p1, p2) - lengthPenalty);
+  }
+
+  // Compare syllable by syllable
+  let matchCount = 0;
+  for (let i = 0; i < syllables1.length; i++) {
+    const syl1 = syllables1[i];
+    const syl2 = syllables2[i];
+
+    // Exact syllable match
+    if (syl1 === syl2) {
+      matchCount += 1;
     }
-
-    // Check for common phonetic confusions
-    const phoneticScore = checkPhoneticSimilarity(s1, s2);
-    if (phoneticScore > 0) {
-      console.log("Phonetic similarity found:", phoneticScore);
-      return phoneticScore;
+    // Check without tone numbers (for partial credit)
+    else if (removeTones(syl1) === removeTones(syl2)) {
+      matchCount += 0.8; // 80% credit for correct pronunciation without tone
+    }
+    // Check phonetic similarity
+    else if (calculateLevenshteinSimilarity(syl1, syl2) > 0.7) {
+      matchCount += 0.6; // 60% credit for similar pronunciation
     }
   }
 
-  // Levenshtein distance calculation
+  return matchCount / syllables1.length;
+};
+
+// Remove tone numbers from pinyin
+const removeTones = (pinyinSyllable) => {
+  return pinyinSyllable.replace(/[1-4]/g, "");
+};
+
+// Levenshtein distance similarity (keep existing function for fallback)
+const calculateLevenshteinSimilarity = (str1, str2) => {
+  const s1 = str1.replace(/\s/g, "").toLowerCase();
+  const s2 = str2.replace(/\s/g, "").toLowerCase();
+
+  if (s1 === s2) return 1.0;
+
+  const matrix = [];
   const len1 = s1.length;
   const len2 = s2.length;
 
-  if (len1 === 0) return len2 === 0 ? 1.0 : 0.0;
-  if (len2 === 0) return 0.0;
+  for (let i = 0; i <= len2; i++) {
+    matrix[i] = [i];
+  }
 
-  const matrix = Array(len2 + 1)
-    .fill()
-    .map(() => Array(len1 + 1).fill(0));
+  for (let j = 0; j <= len1; j++) {
+    matrix[0][j] = j;
+  }
 
-  for (let i = 0; i <= len1; i++) matrix[0][i] = i;
-  for (let j = 0; j <= len2; j++) matrix[j][0] = j;
-
-  for (let j = 1; j <= len2; j++) {
-    for (let i = 1; i <= len1; i++) {
-      if (s1[i - 1] === s2[j - 1]) {
-        matrix[j][i] = matrix[j - 1][i - 1];
+  for (let i = 1; i <= len2; i++) {
+    for (let j = 1; j <= len1; j++) {
+      if (s2.charAt(i - 1) === s1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
       } else {
-        matrix[j][i] = Math.min(
-          matrix[j - 1][i - 1] + 1,
-          matrix[j][i - 1] + 1,
-          matrix[j - 1][i] + 1
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
         );
       }
     }
   }
 
   const maxLen = Math.max(len1, len2);
-  const similarity = (maxLen - matrix[len2][len1]) / maxLen;
-  console.log("Levenshtein similarity:", similarity);
-  return similarity;
-};
-
-// Enhanced phonetic similarity for common Chinese character confusions
-const checkPhoneticSimilarity = (recognized, target) => {
-  const phoneticGroups = [
-    ["一", "七", "医", "衣"],
-    ["二", "儿", "而", "尔"],
-    ["三", "山", "散"],
-    ["四", "是", "十", "事"],
-    ["五", "午", "无", "武"],
-    ["六", "流", "柳"],
-    ["七", "一", "气", "期"],
-    ["八", "爸", "巴"],
-    ["九", "就", "久"],
-    ["十", "是", "四", "时"],
-    ["你", "尼", "泥"],
-    ["我", "握", "沃"],
-    ["他", "她", "它", "塔"],
-    ["的", "得", "德"],
-    ["了", "乐", "勒"],
-    ["和", "河", "何", "核"],
-    ["有", "又", "右"],
-    ["在", "再", "载"],
-    ["会", "回", "汇"],
-    ["说", "水", "税"],
-    ["来", "累", "类"],
-    ["去", "区", "趣"],
-    ["好", "号", "豪"],
-    ["人", "任", "认"],
-    ["年", "念", "粘"],
-    ["天", "田", "甜"],
-    ["上", "商", "尚"],
-    ["下", "夏", "吓"],
-    ["大", "打", "达"],
-    ["小", "笑", "校"],
-  ];
-
-  // Find the group containing the target character
-  for (const group of phoneticGroups) {
-    if (group.includes(target)) {
-      // Check if any character from this group is in the recognized text
-      for (const char of group) {
-        if (recognized.includes(char)) {
-          console.log(`Phonetic match found: ${char} for target ${target}`);
-          return 0.8; // High similarity for phonetic matches
-        }
-      }
-    }
-  }
-
-  return 0;
+  return (maxLen - matrix[len2][len1]) / maxLen;
 };
 
 // Handle speech recognition errors
