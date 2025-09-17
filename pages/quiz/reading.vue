@@ -645,24 +645,91 @@ const allowRetake = () => {
 const initSpeechRecognition = () => {
   if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
     recognition = new window.webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true; // Change to true to see interim results
     recognition.lang = "zh-CN";
 
-    recognition.onstart = () => {};
+    recognition.onstart = () => {
+      console.log("Speech recognition started");
+      recordingStatus.value = {
+        type: "info",
+        title: "Listening...",
+        message:
+          "Say the word clearly and click on 'Stop Recording' after speaking.",
+      };
+    };
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      processSpeechResult(transcript);
+      // Log all results for debugging
+      console.log("🎤 Speech results:", event.results);
+
+      let finalTranscript = "";
+      let interimTranscript = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        console.log(
+          `Result ${i}: "${transcript}" (confidence: ${event.results[i][0].confidence}, final: ${event.results[i].isFinal})`
+        );
+
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      // Show interim results to user
+      if (interimTranscript && !finalTranscript) {
+        recordingStatus.value = {
+          type: "info",
+          title: "Hearing...",
+          message: `I'm hearing: "${interimTranscript}" - keep speaking or click stop.`,
+        };
+      }
+
+      // Process final result
+      if (finalTranscript.trim()) {
+        console.log("🎯 Final transcript:", finalTranscript);
+        if (recognition && isRecording.value) {
+          recognition.stop();
+        }
+        processSpeechResult(finalTranscript.trim());
+      }
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
+
+      if (event.error === "no-speech") {
+        recordingStatus.value = {
+          type: "info",
+          title: "No Speech Detected",
+          message:
+            "Try speaking louder, closer to the microphone, or in a quieter environment.",
+        };
+        return;
+      }
+
       handleSpeechError(event.error);
     };
 
     recognition.onend = () => {
+      console.log("Speech recognition ended");
       isRecording.value = false;
+
+      // Only show error if we haven't processed any result
+      if (
+        !recordingStatus.value ||
+        recordingStatus.value.title === "Listening..."
+      ) {
+        recordingStatus.value = {
+          type: "error",
+          title: "No Clear Speech Detected",
+          message:
+            "Please speak more clearly and try again. Make sure you're in a quiet environment.",
+        };
+      }
     };
   }
 };
@@ -695,7 +762,7 @@ const processSpeechResult = (transcript) => {
   const similarity = calculatePinyinSimilarity(transcriptPinyin, correctPinyin);
   console.log("📊 Pinyin similarity:", similarity);
 
-  const isCorrect = similarity > 0.7;
+  const isCorrect = similarity > 0.8; // Keep your current threshold
   hasAttempted.value = true;
 
   // Track this word's result
@@ -710,13 +777,24 @@ const processSpeechResult = (transcript) => {
     score.value += points;
     correctAnswers.value++;
 
-    recordingStatus.value = {
-      type: "success",
-      title: "Great pronunciation!",
-      message: `You said "${transcript}" (${transcriptPinyin}) - that's correct! 🎉`,
-      points: points,
-    };
+    // Check if it was an exact match or just similar
+    if (transcriptPinyin === correctPinyin) {
+      recordingStatus.value = {
+        type: "success",
+        title: "Perfect pronunciation!",
+        message: `You said "${transcript}" (${transcriptPinyin}) - that's exactly right! 🎉`,
+        points: points,
+      };
+    } else {
+      recordingStatus.value = {
+        type: "success",
+        title: "Great pronunciation!",
+        message: `You said "${transcript}" (${transcriptPinyin}) - close enough! The exact pronunciation is "${currentChinese}" (${correctPinyin}). 🎉`,
+        points: points,
+      };
+    }
   } else {
+    // For incorrect answers, always show the correct pinyin
     recordingStatus.value = {
       type: "error",
       title: "Try again next time!",
@@ -1034,10 +1112,12 @@ const startRecording = async () => {
       type: "info",
       title: "Recording...",
       message:
-        "Speak the Chinese word clearly into your microphone. Click 'Stop Recording' when finished.",
+        "Speak the Chinese word clearly when ready. Click 'Stop Recording' when you're finished speaking.",
     };
 
     recognition.start();
+
+    // REMOVED: No automatic timeout - user controls when to stop
   } catch (error) {
     console.error("Error starting recording:", error);
     recordingStatus.value = {
