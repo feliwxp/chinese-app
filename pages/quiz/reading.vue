@@ -19,6 +19,8 @@
       <div class="w-16 md:w-14"></div>
     </header>
 
+    <!-- Browser Compatibility & Permissions Notice -->
+
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center min-h-96 px-4">
       <div class="text-center">
@@ -155,9 +157,33 @@
           </div>
 
           <div class="space-y-3 md:space-y-4 mb-6 md:mb-8">
+            <div class="bg-blue-50 rounded-xl p-3 md:p-4 text-left">
+              <h3 class="font-bold text-blue-700 mb-2 text-sm md:text-lg">
+                Before you start:
+              </h3>
+              <ul
+                class="text-gray-600 space-y-1 md:space-y-2 text-xs md:text-base"
+              >
+                <li>
+                  • <strong>Please allow microphone access</strong> when your
+                  browser asks
+                </li>
+                <li>
+                  • <strong>Enable speech recognition</strong> for the best
+                  experience
+                </li>
+                <li>
+                  • For optimal results, use
+                  <strong>Chrome or Safari</strong> browser
+                </li>
+                <li>
+                  • Speak clearly and ensure you're in a quiet environment
+                </li>
+              </ul>
+            </div>
             <div class="bg-white rounded-xl p-3 md:p-4 text-left">
               <h3 class="font-bold text-purple-600 mb-2 text-sm md:text-lg">
-                🎤 How it works:
+                How it works:
               </h3>
               <ul
                 class="text-gray-600 space-y-1 md:space-y-2 text-xs md:text-base"
@@ -726,26 +752,37 @@ const calculateSimilarity = (str1, str2) => {
 // Handle speech recognition errors
 const handleSpeechError = (error) => {
   let message = "Speech recognition failed. Please try again.";
+  let title = "Recognition Error";
 
   switch (error) {
     case "network":
-      message = "Network error. Please check your internet connection.";
+      message =
+        "Network error. Please check your internet connection and try again.";
       break;
     case "not-allowed":
+      title = "Permission Required";
       message =
-        "Microphone access denied. Please allow microphone permissions.";
+        "Microphone access was denied. Please allow microphone permissions in your browser settings and refresh the page.";
       break;
     case "no-speech":
-      message = "No speech detected. Please speak louder and try again.";
+      message =
+        "No speech detected. Please speak louder and closer to your microphone.";
       break;
     case "audio-capture":
-      message = "Microphone not found. Please check your audio settings.";
+      title = "Microphone Error";
+      message =
+        "Microphone not found or not working. Please check your audio settings and try again.";
+      break;
+    case "service-not-allowed":
+      title = "Service Error";
+      message =
+        "Speech recognition service is not available. Please try using Chrome or Safari browser.";
       break;
   }
 
   recordingStatus.value = {
     type: "error",
-    title: "Recognition Error",
+    title: title,
     message: message,
   };
 
@@ -875,36 +912,55 @@ const startRecording = async () => {
     recordingStatus.value = null;
 
     if (!recognition) {
-      throw new Error("Speech recognition not supported");
+      recordingStatus.value = {
+        type: "error",
+        title: "Speech Recognition Not Supported",
+        message:
+          "Please use Chrome or Safari browser for speech recognition. Make sure you're on a secure (HTTPS) connection.",
+      };
+      return;
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Request microphone permission explicitly
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop()); // Clean up
+    } catch (permError) {
+      let message = "Microphone access is required for this quiz.";
+
+      if (permError.name === "NotAllowedError") {
+        message =
+          "Microphone access was denied. Please click the microphone icon in your browser's address bar and allow access, then refresh the page.";
+      } else if (permError.name === "NotFoundError") {
+        message =
+          "No microphone found. Please connect a microphone and try again.";
+      }
+
+      recordingStatus.value = {
+        type: "error",
+        title: "Microphone Permission Required",
+        message: message,
+      };
+      return;
+    }
 
     isRecording.value = true;
     recordingStatus.value = {
       type: "info",
       title: "Recording...",
-      message: "Speak the Chinese word clearly into your microphone.",
+      message:
+        "Speak the Chinese word clearly into your microphone. Click 'Stop Recording' when finished.",
     };
 
     recognition.start();
-    stream.getTracks().forEach((track) => track.stop());
   } catch (error) {
     console.error("Error starting recording:", error);
-
-    let message = "Could not access microphone. Please check your permissions.";
-
-    if (error.message.includes("not supported")) {
-      message =
-        "Speech recognition is not supported in your browser. Try using Chrome.";
-    }
-
     recordingStatus.value = {
       type: "error",
       title: "Recording Error",
-      message: message,
+      message:
+        "Could not start recording. Please check your microphone permissions and try again.",
     };
-
     isRecording.value = false;
   }
 };
