@@ -1,13 +1,13 @@
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100"
+    class="min-h-screen bg-gradient-to-br from-green-100 via-blue-50 to-purple-100"
   >
     <!-- Loading State -->
     <div v-if="loading" class="min-h-screen flex items-center justify-center">
       <div class="text-center">
         <div class="text-4xl md:text-6xl mb-4">⏳</div>
         <p class="text-lg md:text-2xl text-gray-600">
-          Loading math questions...
+          Loading spelling words...
         </p>
       </div>
     </div>
@@ -21,7 +21,7 @@
         <div class="text-4xl md:text-6xl mb-4">❌</div>
         <p class="text-lg text-red-600 mb-4">{{ error }}</p>
         <button
-          @click="loadQuestions"
+          @click="loadWords"
           class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-3 px-6 rounded-full text-lg"
         >
           Try Again
@@ -29,25 +29,25 @@
       </div>
     </div>
 
-    <!-- No Questions State -->
+    <!-- No Words State -->
     <div
-      v-else-if="questions.length === 0"
+      v-else-if="wordList.length === 0"
       class="min-h-screen flex items-center justify-center p-4"
     >
       <div class="text-center">
         <div class="text-4xl md:text-6xl mb-4">📝</div>
         <h2 class="text-2xl font-bold text-gray-700 mb-4">
-          No Active Math Questions Available
+          No Spelling Words Available
         </h2>
         <p class="text-lg text-gray-600 mb-6">
-          Ask your parent to add some math questions in Settings first!
+          Ask your parent to add some spelling words in Settings first!
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <NuxtLink
-            to="/settings/math"
-            class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
+            to="/settings/spelling-english"
+            class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
           >
-            Add Questions
+            Add Words
           </NuxtLink>
           <NuxtLink
             to="/"
@@ -64,20 +64,20 @@
       <!-- Header -->
       <header class="flex justify-between items-center p-4 md:p-6">
         <NuxtLink
-          to="/progress/math"
+          to="/progress/spelling-english"
           class="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-bold py-2 px-4 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
         >
           <span>←</span>
           <span class="hidden sm:inline">Back</span>
         </NuxtLink>
 
-        <div class="text-lg md:text-2xl font-bold text-blue-600">
-          🧮 <span class="hidden sm:inline">Math Practice</span>
+        <div class="text-lg md:text-2xl font-bold text-green-600">
+          ✏️ <span class="hidden sm:inline">Spelling Practice</span>
         </div>
 
         <div
           v-if="practiceStarted"
-          class="text-sm md:text-lg font-semibold text-blue-600"
+          class="text-sm md:text-lg font-semibold text-green-600"
         >
           Score: {{ score }}
         </div>
@@ -123,7 +123,7 @@
 
             <div class="space-y-3 md:space-y-4">
               <NuxtLink
-                to="/progress/math"
+                to="/progress/spelling-english"
                 class="btn-primary inline-flex items-center gap-2 text-base md:text-xl py-3 px-6"
               >
                 <span>📊</span>
@@ -153,75 +153,73 @@
         <!-- Practice Not Started -->
         <div v-else-if="!practiceStarted" class="text-center">
           <h1
-            class="text-3xl md:text-5xl font-bold text-blue-600 mb-4 md:mb-6 bounce-gentle"
+            class="text-3xl md:text-5xl font-bold text-green-600 mb-4 md:mb-6 bounce-gentle"
           >
             Ready to Practice? 🎯
           </h1>
 
           <div class="card-colorful max-w-2xl mx-auto">
-            <div class="text-3xl md:text-4xl mb-4 md:mb-6">🧮</div>
+            <div class="text-3xl md:text-4xl mb-4 md:mb-6">✏️</div>
             <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-4">
               <span class="hidden sm:inline"
-                >Today's Math Practice Challenge</span
+                >Today's Spelling Practice Challenge</span
               >
               <span class="sm:hidden">Today's Challenge</span>
             </h2>
 
             <div class="bg-white rounded-xl p-3 md:p-4 mb-4 md:mb-6">
-              <h3 class="font-bold text-blue-600 mb-2 text-sm md:text-lg">
+              <h3 class="font-bold text-green-600 mb-2 text-sm md:text-lg">
                 📊
                 <span class="hidden sm:inline"
-                  >Today's Questions ({{ questions.length }} problems):</span
+                  >Today's Words ({{ totalQuestions }} words):</span
                 >
-                <span class="sm:hidden">{{ questions.length }} Problems:</span>
+                <span class="sm:hidden">{{ totalQuestions }} Words:</span>
               </h3>
               <div
                 class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs md:text-sm"
               >
                 <div
-                  v-for="(question, index) in questions.slice(0, 6)"
-                  :key="question.id"
-                  class="bg-blue-50 rounded px-2 py-1 text-left"
+                  v-for="(word, index) in wordList.slice(0, 6)"
+                  :key="index"
+                  class="bg-green-50 rounded px-2 py-1 text-left"
                 >
                   <span class="font-bold">{{ index + 1 }}.</span>
-                  {{ question.question.substring(0, 40) }}...
+                  {{ word.word }} - {{ word.definition.substring(0, 30) }}...
                 </div>
                 <div
-                  v-if="questions.length > 6"
+                  v-if="wordList.length > 6"
                   class="bg-gray-50 rounded px-2 py-1 text-gray-500"
                 >
-                  +{{ questions.length - 6 }} more...
+                  +{{ wordList.length - 6 }} more...
                 </div>
               </div>
             </div>
 
             <div class="space-y-3 md:space-y-4 mb-6 md:mb-8">
               <div class="bg-white rounded-xl p-3 md:p-4 text-left">
-                <h3 class="font-bold text-blue-600 mb-2 text-sm md:text-lg">
+                <h3 class="font-bold text-green-600 mb-2 text-sm md:text-lg">
                   🎯 How it works:
                 </h3>
                 <ul
                   class="text-gray-600 space-y-1 md:space-y-2 text-xs md:text-base"
                 >
-                  <li>• Read each word problem carefully</li>
-                  <li>• Use the work area to show your calculations</li>
-                  <li>• Enter your final answer in the answer box</li>
-                  <li>• Get detailed explanations for each problem</li>
-                  <li>• Earn points for correct answers!</li>
+                  <li>• Listen to each word being spoken</li>
+                  <li>• Hear it used in a sentence for context</li>
+                  <li>• Type the word with correct spelling</li>
+                  <li>• Learn definitions and see examples</li>
+                  <li>• Earn points for correct spelling!</li>
                 </ul>
               </div>
             </div>
 
             <button
               @click="startPractice"
-              :disabled="questions.length === 0"
+              :disabled="wordList.length === 0"
               class="btn-primary text-base md:text-xl py-3 px-6 md:py-4 md:px-8 inline-flex items-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed"
             >
               <span>🚀</span>
               {{
-                questions.length === 0
-                  ? "No Questions Available"
-                  : "Start Practice!"
+                wordList.length === 0 ? "No Words Available" : "Start Practice!"
               }}
             </button>
           </div>
@@ -235,19 +233,19 @@
               class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 text-xs md:text-base gap-1"
             >
               <span class="font-semibold text-gray-600">
-                Question {{ currentQuestionIndex + 1 }} of
-                {{ questions.length }}
+                Word {{ currentQuestionIndex + 1 }} of
+                {{ totalQuestions }}
               </span>
-              <span class="font-semibold text-blue-600">
+              <span class="font-semibold text-green-600">
                 Score: {{ score }} points
               </span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2 md:h-3">
               <div
-                class="bg-gradient-to-r from-blue-400 to-purple-400 h-2 md:h-3 rounded-full transition-all duration-500"
+                class="bg-gradient-to-r from-green-400 to-teal-400 h-2 md:h-3 rounded-full transition-all duration-500"
                 :style="{
                   width: `${
-                    ((currentQuestionIndex + 1) / questions.length) * 100
+                    ((currentQuestionIndex + 1) / totalQuestions) * 100
                   }%`,
                 }"
               ></div>
@@ -256,122 +254,66 @@
 
           <!-- Current Question -->
           <div
-            v-if="currentQuestion"
+            v-if="currentWord"
             class="bg-white rounded-3xl shadow-2xl p-6 md:p-8 mb-8"
           >
             <div class="text-center mb-6">
               <h2 class="text-xl md:text-2xl font-bold text-gray-700 mb-4">
-                Question {{ currentQuestionIndex + 1 }} of
-                {{ questions.length }}
+                Word {{ currentQuestionIndex + 1 }} of
+                {{ totalQuestions }}
               </h2>
-              <!-- Word Problem Display -->
-              <div class="bg-blue-50 rounded-2xl p-6 mb-6">
-                <div class="text-lg md:text-xl text-gray-800 leading-relaxed">
-                  {{ currentQuestion.question }}
+              <!-- Audio Controls -->
+              <div class="bg-green-50 rounded-2xl p-6 mb-6">
+                <h3 class="text-lg md:text-xl font-bold text-green-700 mb-4">
+                  🎧 Listen and Spell the Word
+                </h3>
+
+                <!-- Audio Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                  <button
+                    @click="playAudio('word')"
+                    :disabled="isPlaying"
+                    class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100"
+                  >
+                    🔊
+                    {{ isPlaying === "word" ? "Playing Word..." : "Play Word" }}
+                  </button>
+
+                  <button
+                    @click="playAudio('sentence')"
+                    :disabled="isPlaying"
+                    class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100"
+                  >
+                    📝
+                    {{
+                      isPlaying === "sentence"
+                        ? "Playing Sentence..."
+                        : "Play Sentence"
+                    }}
+                  </button>
                 </div>
+
+                <p class="text-sm text-gray-600 mt-4">
+                  Click to hear the word or a sentence containing the word. You
+                  can play them multiple times!
+                </p>
               </div>
             </div>
 
-            <!-- Work Area with Math Buttons -->
+            <!-- Word Input -->
             <div class="mb-6">
               <label class="block text-lg font-semibold text-gray-700 mb-3">
-                Show your work:
-              </label>
-
-              <!-- Math Operation Buttons -->
-              <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                <button
-                  @click="addToWork('+')"
-                  class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  + (Plus)
-                </button>
-                <button
-                  @click="addToWork('-')"
-                  class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  - (Minus)
-                </button>
-                <button
-                  @click="addToWork('×')"
-                  class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  × (Times)
-                </button>
-                <button
-                  @click="addToWork('÷')"
-                  class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  ÷ (Divide)
-                </button>
-                <button
-                  @click="addToWork('=')"
-                  class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  = (Equals)
-                </button>
-              </div>
-
-              <!-- Number Buttons -->
-              <div class="grid grid-cols-5 gap-2 mb-4 max-w-md mx-auto">
-                <button
-                  v-for="num in [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]"
-                  :key="num"
-                  @click="addToWork(num.toString())"
-                  class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-4 rounded-lg text-lg shadow transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  {{ num }}
-                </button>
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="flex gap-2 mb-4 justify-center">
-                <button
-                  @click="addToWork(' ')"
-                  class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  Space
-                </button>
-                <button
-                  @click="addToWork('\n')"
-                  class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  New Line
-                </button>
-                <button
-                  @click="clearLastCharacter"
-                  class="bg-red-400 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg shadow transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  ⌫ Delete
-                </button>
-                <button
-                  @click="clearWork"
-                  class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow transform transition-all duration-200 hover:scale-105 active:scale-95"
-                >
-                  Clear All
-                </button>
-              </div>
-
-              <!-- Work Area Text Field -->
-              <textarea
-                v-model="workArea"
-                placeholder="Your work will appear here... You can also type directly."
-                class="w-full h-40 p-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-lg font-mono resize-none bg-yellow-50"
-              ></textarea>
-            </div>
-
-            <!-- Final Answer -->
-            <div class="mb-6">
-              <label class="block text-lg font-semibold text-gray-700 mb-3">
-                Final Answer:
+                Type the word you heard:
               </label>
               <div class="flex gap-2 items-center">
                 <input
-                  v-model="finalAnswer"
+                  v-model="userAnswer"
+                  ref="answerInput"
                   type="text"
-                  placeholder="Enter your final answer (numbers only)"
-                  class="flex-1 p-4 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none text-xl font-bold text-center"
+                  placeholder="Enter the word here..."
+                  class="flex-1 p-4 border-2 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none text-xl font-bold text-center"
                   @keypress.enter="submitAnswer"
+                  :disabled="showFeedback"
                 />
                 <button
                   @click="clearAnswer"
@@ -386,8 +328,8 @@
             <div class="text-center">
               <button
                 @click="submitAnswer"
-                :disabled="!finalAnswer.trim()"
-                class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100"
+                :disabled="!userAnswer.trim() || showFeedback"
+                class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-8 rounded-full text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100"
               >
                 Submit Answer
               </button>
@@ -410,35 +352,39 @@
                 {{ isCorrect ? "Correct!" : "Not quite right" }}
               </h3>
               <p class="text-lg text-gray-700 mb-2">
-                The correct answer is:
-                <strong class="text-2xl text-blue-600">{{
-                  currentQuestion.answer
+                The correct spelling is:
+                <strong class="text-2xl text-green-600">{{
+                  currentWord.word
                 }}</strong>
               </p>
-              <p
-                v-if="currentQuestion.explanation"
-                class="text-gray-600 mb-6 text-left bg-gray-50 p-4 rounded-lg"
-              >
-                <strong>Explanation:</strong><br />
-                <span class="whitespace-pre-line">{{
-                  currentQuestion.explanation
-                }}</span>
+              <p v-if="!isCorrect" class="text-gray-600 mb-4">
+                Your answer: "{{ userAnswer }}"
               </p>
-              <div v-if="workArea" class="mb-6 text-left">
-                <strong class="text-gray-700">Your work:</strong>
-                <div
-                  class="bg-yellow-50 p-3 rounded-lg font-mono text-sm mt-2 whitespace-pre-line"
-                >
-                  {{ workArea }}
+
+              <!-- Word Definition and Sentence -->
+              <div class="space-y-4 mb-6">
+                <div class="p-4 bg-blue-50 rounded-xl text-left">
+                  <h4 class="font-bold text-blue-700 mb-2">📖 Definition:</h4>
+                  <p class="text-gray-700">{{ currentWord.definition }}</p>
+                </div>
+
+                <div class="p-4 bg-green-50 rounded-xl text-left">
+                  <h4 class="font-bold text-green-700 mb-2">
+                    📝 Example Sentence:
+                  </h4>
+                  <p class="text-gray-700 italic">
+                    "{{ currentWord.sentence }}"
+                  </p>
                 </div>
               </div>
+
               <button
                 @click="nextQuestion"
-                class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
+                class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-full text-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 {{
-                  currentQuestionIndex + 1 < questions.length
-                    ? "Next Question"
+                  currentQuestionIndex + 1 < totalQuestions
+                    ? "Next Word"
                     : "Finish Practice"
                 }}
               </button>
@@ -464,7 +410,7 @@
 
             <div v-if="saving" class="mb-4 md:mb-6">
               <div class="text-xl md:text-2xl mb-2">💾</div>
-              <p class="text-base md:text-lg text-blue-600">
+              <p class="text-base md:text-lg text-green-600">
                 Saving your results...
               </p>
             </div>
@@ -491,7 +437,7 @@
 
             <div class="space-y-3 md:space-y-4">
               <NuxtLink
-                to="/progress/math"
+                to="/progress/spelling-english"
                 class="btn-primary inline-flex items-center gap-2 text-base md:text-xl py-3 px-6"
               >
                 <span>📊</span>
@@ -501,7 +447,7 @@
               <div class="flex flex-col sm:flex-row gap-2 justify-center">
                 <button
                   @click="restartPractice"
-                  class="bg-gradient-to-r from-blue-400 to-purple-400 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+                  class="bg-gradient-to-r from-green-400 to-teal-400 hover:from-green-500 hover:to-teal-500 text-white font-bold py-2 px-4 md:py-3 md:px-6 rounded-full text-sm md:text-lg shadow-lg transform transition-all duration-200 hover:scale-105"
                 >
                   🔄 <span class="hidden sm:inline">Try Again</span
                   ><span class="sm:hidden">Again</span>
@@ -524,11 +470,11 @@
 
 <script setup>
 useHead({
-  title: "Math Practice - Learning Fun!",
+  title: "Spelling Practice - Learning Fun!",
   meta: [
     {
       name: "description",
-      content: "Practice solving math word problems step by step",
+      content: "Practice spelling English words with interactive exercises",
     },
   ],
 });
@@ -537,18 +483,11 @@ useHead({
 const supabase = useSupabaseClient();
 
 // Reactive data
-const questions = ref([]);
-const currentQuestionIndex = ref(0);
-const workArea = ref("");
-const finalAnswer = ref("");
-const score = ref(0);
-const showFeedback = ref(false);
-const isCorrect = ref(false);
 const loading = ref(true);
 const error = ref(null);
 const saving = ref(false);
 
-// New state variables to match reading page
+// New state variables to match math page
 const practiceStarted = ref(false);
 const practiceCompleted = ref(false);
 const todayCompleted = ref(false);
@@ -556,21 +495,36 @@ const todayResults = ref({});
 
 // Track practice session
 const practiceStartTime = ref(null);
-const practiceQuestions = ref([]);
+const practiceWords = ref([]);
 
-// Computed
-const currentQuestion = computed(() => {
-  return questions.value[currentQuestionIndex.value] || null;
-});
+// Quiz state
+const currentQuestionIndex = ref(0);
+const score = ref(0);
+const totalQuestions = ref(10); // Will be updated when words are loaded
+const userAnswer = ref("");
+const showFeedback = ref(false);
+const isCorrect = ref(false);
+const isPlaying = ref(false);
+const answerInput = ref(null);
 
+// Word database with sentences
+const wordList = ref([]);
+
+// Current quiz data
+const currentWords = ref([]);
+const currentWord = computed(
+  () => currentWords.value[currentQuestionIndex.value]
+);
+
+// Computed properties
 const accuracy = computed(() => {
-  return practiceQuestions.value.length > 0
-    ? (score.value / practiceQuestions.value.length) * 100
+  return totalQuestions.value > 0
+    ? Math.round((score.value / totalQuestions.value) * 100)
     : 0;
 });
 
-// Load only active questions from database
-const loadQuestions = async () => {
+// Load words (similar to math page loadQuestions)
+const loadWords = async () => {
   loading.value = true;
   error.value = null;
 
@@ -582,13 +536,13 @@ const loadQuestions = async () => {
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     const { data: existingResult, error: resultError } = await supabase
-      .from("math_results")
+      .from("spelling_results")
       .select("*")
       .eq("date", todayDateString)
       .maybeSingle();
 
     if (resultError) {
-      console.error("Error checking existing math result:", resultError);
+      console.error("Error checking existing spelling result:", resultError);
       throw resultError;
     }
 
@@ -597,75 +551,52 @@ const loadQuestions = async () => {
       todayResults.value = {
         score: existingResult.score || 0,
         accuracy: Math.round(existingResult.accuracy || 0),
-        questionsAttempted: existingResult.questions_attempted || 0,
+        wordsAttempted: existingResult.words_attempted || 0,
         correctAnswers: existingResult.correct_answers || 0,
       };
     } else {
       todayCompleted.value = false;
     }
 
-    // Fetch only active questions from Supabase
-    const { data: mathQuestions, error: fetchError } = await supabase
-      .from("math_questions")
+    // Try to fetch words from Supabase first
+    const { data: spellingWords, error: fetchError } = await supabase
+      .from("spelling_words")
       .select("*")
-      .eq("status", "active") // Only load active questions
+      .eq("status", "active")
       .order("created_at", { ascending: true });
 
     if (fetchError) throw fetchError;
 
-    if (mathQuestions && mathQuestions.length > 0) {
+    if (spellingWords && spellingWords.length > 0) {
       // Transform database format to match expected format
-      questions.value = mathQuestions.map((question) => ({
-        id: question.id,
-        question: question.question,
-        answer: question.answer,
-        explanation: question.explanation,
+      wordList.value = spellingWords.map((word) => ({
+        id: word.id,
+        word: word.word,
+        definition: word.definition,
+        sentence: word.sentence,
       }));
-    } else {
-      // If no active questions in database, try localStorage as fallback
-      const stored = localStorage.getItem("mathQuestions");
-      if (stored) {
-        const storedQuestions = JSON.parse(stored);
-        // Filter only active questions from localStorage too
-        const activeQuestions = storedQuestions.filter(
-          (q) => q.status === "active" || !q.status
-        );
-        if (activeQuestions.length > 0) {
-          questions.value = activeQuestions;
-        } else {
-          questions.value = [];
-        }
-      } else {
-        questions.value = [];
-      }
-    }
-  } catch (err) {
-    console.error("❌ Error loading math questions:", err);
-    error.value = "Failed to load math questions. Please try again.";
 
-    // Try localStorage as fallback
-    try {
-      const stored = localStorage.getItem("mathQuestions");
-      if (stored) {
-        const storedQuestions = JSON.parse(stored);
-        const activeQuestions = storedQuestions.filter(
-          (q) => q.status === "active" || !q.status
-        );
-        if (activeQuestions.length > 0) {
-          questions.value = activeQuestions;
-          error.value = null;
-        }
-      }
-    } catch (localError) {
-      console.error("❌ Fallback failed:", localError);
+      // Update total questions to match available words
+      totalQuestions.value = wordList.value.length;
+    }
+    // If no words in database, keep the default wordList as fallback
+  } catch (err) {
+    console.error("❌ Error loading spelling words:", err);
+    error.value = "Failed to load spelling words. Please try again.";
+
+    // Keep the default wordList as fallback
+    if (wordList.value.length === 0) {
+      error.value = "No spelling words available.";
+    } else {
+      error.value = null; // Clear error if we have fallback words
     }
   } finally {
     loading.value = false;
   }
 };
 
-// Save math results to database
-const saveMathResults = async (mathData) => {
+// Save spelling results to database
+const saveSpellingResults = async (spellingData) => {
   saving.value = true;
 
   try {
@@ -680,7 +611,7 @@ const saveMathResults = async (mathData) => {
 
     // Check if entry for today already exists
     const { data: existingResult, error: fetchError } = await supabase
-      .from("math_results")
+      .from("spelling_results")
       .select("*")
       .eq("date", localDate)
       .single();
@@ -692,20 +623,20 @@ const saveMathResults = async (mathData) => {
 
     const resultData = {
       date: localDate,
-      questions_attempted: mathData.questionsAttempted,
-      correct_answers: mathData.correctAnswers,
-      accuracy: mathData.accuracy,
-      score: mathData.score,
-      completed: mathData.completed,
-      time_spent: mathData.timeSpent,
-      questions_data: mathData.questions,
+      words_attempted: spellingData.wordsAttempted,
+      correct_answers: spellingData.correctAnswers,
+      accuracy: spellingData.accuracy,
+      score: spellingData.score,
+      completed: spellingData.completed,
+      time_spent: spellingData.timeSpent,
+      words_data: spellingData.words,
       updated_at: new Date().toISOString(),
     };
 
     if (existingResult) {
       // Replace existing record with latest results
       const { error: updateError } = await supabase
-        .from("math_results")
+        .from("spelling_results")
         .update(resultData)
         .eq("date", localDate);
 
@@ -713,7 +644,7 @@ const saveMathResults = async (mathData) => {
     } else {
       // Insert new record
       const { error: insertError } = await supabase
-        .from("math_results")
+        .from("spelling_results")
         .insert(resultData);
 
       if (insertError) throw insertError;
@@ -722,13 +653,13 @@ const saveMathResults = async (mathData) => {
     // Update today's status
     todayCompleted.value = true;
     todayResults.value = {
-      score: mathData.score,
-      accuracy: Math.round(mathData.accuracy),
-      questionsAttempted: mathData.questionsAttempted,
-      correctAnswers: mathData.correctAnswers,
+      score: spellingData.score,
+      accuracy: Math.round(spellingData.accuracy),
+      wordsAttempted: spellingData.wordsAttempted,
+      correctAnswers: spellingData.correctAnswers,
     };
   } catch (err) {
-    console.error("❌ Error saving math results:", err);
+    console.error("❌ Error saving spelling results:", err);
     throw err;
   } finally {
     saving.value = false;
@@ -747,33 +678,16 @@ const allowRetake = () => {
 const startPractice = () => {
   practiceStarted.value = true;
   resetPractice();
-};
-
-// Methods
-const addToWork = (value) => {
-  workArea.value += value;
-};
-
-const clearLastCharacter = () => {
-  workArea.value = workArea.value.slice(0, -1);
-};
-
-const clearWork = () => {
-  workArea.value = "";
-};
-
-const clearAnswer = () => {
-  finalAnswer.value = "";
+  startQuiz();
 };
 
 const resetPractice = () => {
   currentQuestionIndex.value = 0;
-  workArea.value = "";
-  finalAnswer.value = "";
+  userAnswer.value = "";
   score.value = 0;
   showFeedback.value = false;
   isCorrect.value = false;
-  practiceQuestions.value = [];
+  practiceWords.value = [];
   practiceStartTime.value = new Date();
 };
 
@@ -783,69 +697,167 @@ const restartPractice = () => {
   resetPractice();
 };
 
-// Update submitAnswer method
+const startQuiz = () => {
+  // Shuffle all available words for the quiz
+  const selectedWordList = [...wordList.value];
+  currentWords.value = selectedWordList.sort(() => Math.random() - 0.5);
+
+  // Focus on input
+  nextTick(() => {
+    if (answerInput.value) {
+      answerInput.value.focus();
+    }
+  });
+};
+
+const clearAnswer = () => {
+  userAnswer.value = "";
+};
+
+const playAudio = (type = "word") => {
+  if (isPlaying.value || !currentWord.value) return;
+
+  isPlaying.value = type;
+
+  // Use Web Speech API for text-to-speech
+  if ("speechSynthesis" in window) {
+    const textToSpeak =
+      type === "word" ? currentWord.value.word : currentWord.value.sentence;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+
+    // Select a better voice
+    const voices = speechSynthesis.getVoices();
+    let selectedVoice = null;
+
+    // Look for high-quality English voices (prefer female voices for clarity)
+    const preferredVoices = [
+      "Samantha", // macOS - high quality female voice
+      "Alex", // macOS - high quality male voice
+      "Victoria", // macOS - female voice
+      "Allison", // macOS - female voice
+      "Ava", // macOS - female voice
+      "Susan", // macOS - female voice
+      "Microsoft Zira Desktop", // Windows - female
+      "Microsoft David Desktop", // Windows - male
+      "Google UK English Female", // Chrome - female
+      "Google US English", // Chrome - neutral
+    ];
+
+    // First, try to find preferred voices
+    for (const voiceName of preferredVoices) {
+      selectedVoice = voices.find(
+        (voice) => voice.name.includes(voiceName) && voice.lang.startsWith("en")
+      );
+      if (selectedVoice) break;
+    }
+
+    // If no preferred voice found, look for any good English voice
+    if (!selectedVoice) {
+      selectedVoice = voices.find(
+        (voice) =>
+          voice.lang.startsWith("en") &&
+          (voice.name.toLowerCase().includes("female") ||
+            voice.name.toLowerCase().includes("premium") ||
+            voice.name.toLowerCase().includes("enhanced"))
+      );
+    }
+
+    // Final fallback: any English voice
+    if (!selectedVoice) {
+      selectedVoice = voices.find((voice) => voice.lang.startsWith("en"));
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    utterance.rate = type === "word" ? 0.6 : 0.7; // Slower for better pronunciation
+    utterance.volume = 1;
+    utterance.pitch = 1; // Normal pitch
+
+    utterance.onend = () => {
+      isPlaying.value = false;
+    };
+
+    speechSynthesis.speak(utterance);
+  } else {
+    // Fallback: just show the word briefly
+    setTimeout(
+      () => {
+        isPlaying.value = false;
+      },
+      type === "word" ? 1000 : 3000
+    );
+  }
+};
+
 const submitAnswer = () => {
-  if (!finalAnswer.value.trim()) return;
+  if (!userAnswer.value.trim() || showFeedback.value) return;
 
-  // Extract numbers from the answer and compare
-  const userAnswer = finalAnswer.value.trim().replace(/[^\d]/g, "");
-  const correctAnswer = currentQuestion.value.answer.replace(/[^\d]/g, "");
+  const correct =
+    userAnswer.value.toLowerCase().trim() ===
+    currentWord.value.word.toLowerCase();
+  isCorrect.value = correct;
 
-  isCorrect.value = userAnswer === correctAnswer;
-  if (isCorrect.value) {
+  if (correct) {
     score.value++;
   }
 
-  // Track this question attempt
-  practiceQuestions.value.push({
-    question_id: currentQuestion.value.id,
-    question: currentQuestion.value.question,
-    correct_answer: currentQuestion.value.answer,
-    user_answer: finalAnswer.value.trim(),
-    correct: isCorrect.value,
-    work_shown: workArea.value,
-    explanation: currentQuestion.value.explanation,
+  // Track this word attempt
+  practiceWords.value.push({
+    word_id: currentWord.value.id || currentQuestionIndex.value,
+    word: currentWord.value.word,
+    definition: currentWord.value.definition,
+    sentence: currentWord.value.sentence,
+    user_answer: userAnswer.value.trim(),
+    correct: correct,
     timestamp: new Date().toISOString(),
   });
 
   showFeedback.value = true;
 };
 
-// Update nextQuestion method to save results when practice is complete
 const nextQuestion = async () => {
   showFeedback.value = false;
-  workArea.value = "";
-  finalAnswer.value = "";
+  userAnswer.value = "";
 
-  if (currentQuestionIndex.value + 1 < questions.value.length) {
+  if (currentQuestionIndex.value + 1 < totalQuestions.value) {
+    // Move to next question
     currentQuestionIndex.value++;
+
+    // Focus on input
+    nextTick(() => {
+      if (answerInput.value) {
+        answerInput.value.focus();
+      }
+    });
   } else {
     // Practice complete - save results to database
-    if (practiceQuestions.value.length > 0) {
+    if (practiceWords.value.length > 0) {
       const endTime = new Date();
       const timeSpent = Math.round(
         (endTime - practiceStartTime.value) / (1000 * 60)
       ); // minutes
 
       const accuracy =
-        practiceQuestions.value.length > 0
-          ? Math.round((score.value / practiceQuestions.value.length) * 100)
+        practiceWords.value.length > 0
+          ? Math.round((score.value / practiceWords.value.length) * 100)
           : 0;
 
-      const mathData = {
-        questionsAttempted: practiceQuestions.value.length,
+      const spellingData = {
+        wordsAttempted: practiceWords.value.length,
         correctAnswers: score.value,
         accuracy: accuracy,
         score: score.value * 10, // 10 points per correct answer
         completed: true,
         timeSpent: Math.max(timeSpent, 1), // Minimum 1 minute
-        questions: practiceQuestions.value,
+        words: practiceWords.value,
       };
 
       try {
-        await saveMathResults(mathData);
+        await saveSpellingResults(spellingData);
       } catch (error) {
-        console.error("❌ Failed to save math results:", error);
+        console.error("❌ Failed to save spelling results:", error);
         // Could show a toast notification here
       }
     }
@@ -854,9 +866,9 @@ const nextQuestion = async () => {
   }
 };
 
-// Load questions and start practice on mount
+// Load words on mount
 onMounted(async () => {
-  await loadQuestions();
+  await loadWords();
   practiceStartTime.value = new Date();
 });
 </script>
@@ -881,6 +893,6 @@ onMounted(async () => {
 }
 
 .btn-primary {
-  @apply bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  @apply bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
 }
 </style>

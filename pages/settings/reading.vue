@@ -194,16 +194,6 @@
               >
               <span class="sm:hidden">Words ({{ filteredWords.length }})</span>
             </h2>
-
-            <button
-              @click="refreshWords"
-              :disabled="loading"
-              class="bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-2 px-4 rounded-full text-sm shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100"
-            >
-              <span v-if="loading">⏳</span>
-              <span v-else>🔄</span>
-              Refresh
-            </button>
           </div>
 
           <!-- Loading State -->
@@ -219,12 +209,6 @@
           <div v-else-if="error" class="text-center py-8 md:py-12">
             <div class="text-4xl md:text-6xl mb-3 md:mb-4">❌</div>
             <p class="text-lg md:text-xl text-red-600 mb-4">{{ error }}</p>
-            <button
-              @click="refreshWords"
-              class="bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold py-2 px-4 rounded-full"
-            >
-              Try Again
-            </button>
           </div>
 
           <!-- Words Grid -->
@@ -696,10 +680,6 @@ const deleteWord = async (word) => {
   } finally {
     loading.value = false;
   }
-};
-
-const refreshWords = () => {
-  fetchWords();
 };
 
 // Load words on mount

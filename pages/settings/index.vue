@@ -29,7 +29,9 @@
 
       <!-- Settings Cards -->
       <div class="max-w-4xl mx-auto">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+        >
           <!-- Manage Study Words Card -->
           <div class="card-colorful text-center">
             <div class="text-6xl md:text-8xl mb-4 md:mb-6">📚</div>
@@ -71,6 +73,28 @@
             >
               <span>🔢</span>
               Set Questions
+            </NuxtLink>
+          </div>
+
+          <!-- Manage Spelling Words Card -->
+          <div class="card-colorful text-center">
+            <div class="text-6xl md:text-8xl mb-4 md:mb-6">✏️</div>
+            <h2
+              class="text-2xl md:text-3xl font-bold text-green-700 mb-4 md:mb-6"
+            >
+              Manage Spelling Words
+            </h2>
+            <p class="text-base md:text-lg text-gray-600 mb-6 md:mb-8">
+              Add new spelling words, edit definitions and sentences, and
+              customize the English spelling practice.
+            </p>
+
+            <NuxtLink
+              to="/settings/spelling-english"
+              class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-lg md:text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 inline-flex items-center gap-3"
+            >
+              <span>📝</span>
+              Set Words
             </NuxtLink>
           </div>
         </div>

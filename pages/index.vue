@@ -110,6 +110,44 @@
           </div>
         </div>
 
+        <!-- Spelling English Words Card -->
+        <div
+          class="card-colorful mb-6 md:mb-8 transform hover:scale-105 transition-all duration-300"
+        >
+          <div
+            class="flex flex-col md:flex-row md:items-center md:justify-between"
+          >
+            <div class="flex-1 mb-4 md:mb-0">
+              <h2
+                class="text-2xl md:text-3xl font-bold text-green-700 mb-3 flex items-center gap-3 justify-center md:justify-start"
+              >
+                <span class="text-3xl md:text-4xl">📝</span>
+                Spelling English Words
+              </h2>
+              <p
+                class="text-base md:text-lg text-gray-600 mb-4 text-center md:text-left"
+              >
+                Practice spelling English words! Listen to words and type them
+                correctly to improve your spelling skills.
+              </p>
+              <div
+                class="flex flex-col sm:flex-row gap-3 justify-center md:justify-start"
+              >
+                <NuxtLink
+                  to="/progress/spelling-english"
+                  class="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full text-base md:text-xl shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2 justify-center"
+                >
+                  <span>✏️</span>
+                  Start Spelling
+                </NuxtLink>
+              </div>
+            </div>
+            <div class="text-6xl md:text-8xl opacity-20 text-center md:ml-8">
+              <span>ABC</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Coming Soon Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <!-- Writing Practice -->
