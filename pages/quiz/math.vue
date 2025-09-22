@@ -569,6 +569,101 @@ const accuracy = computed(() => {
     : 0;
 });
 
+// localStorage key for persisting quiz state
+const STORAGE_KEY = "math-quiz-state";
+
+// Get today's date string for validation
+const getTodayDateString = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(today.getDate()).padStart(2, "0")}`;
+};
+
+// Save quiz state to localStorage
+const saveQuizState = () => {
+  if (!practiceStarted.value) return;
+
+  const quizState = {
+    date: getTodayDateString(),
+    practiceStarted: practiceStarted.value,
+    practiceCompleted: practiceCompleted.value,
+    currentQuestionIndex: currentQuestionIndex.value,
+    score: score.value,
+    workArea: workArea.value,
+    finalAnswer: finalAnswer.value,
+    practiceQuestions: practiceQuestions.value,
+    questions: questions.value,
+    practiceStartTime: practiceStartTime.value?.toISOString(),
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(quizState));
+  } catch (error) {
+    console.error("Failed to save quiz state:", error);
+  }
+};
+
+// Load quiz state from localStorage
+const loadQuizState = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+
+    const quizState = JSON.parse(saved);
+
+    // Validate that the saved state is from today
+    if (quizState.date !== getTodayDateString()) {
+      // Clear old state if it's from a different day
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    // Validate that the state is not too old (more than 8 hours)
+    const savedTime = new Date(quizState.timestamp);
+    const now = new Date();
+    const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
+
+    if (hoursDiff > 8) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    return quizState;
+  } catch (error) {
+    console.error("Failed to load quiz state:", error);
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+};
+
+// Restore quiz state
+const restoreQuizState = (quizState) => {
+  practiceStarted.value = quizState.practiceStarted;
+  practiceCompleted.value = quizState.practiceCompleted;
+  currentQuestionIndex.value = quizState.currentQuestionIndex;
+  score.value = quizState.score;
+  workArea.value = quizState.workArea || "";
+  finalAnswer.value = quizState.finalAnswer || "";
+  practiceQuestions.value = quizState.practiceQuestions || [];
+  questions.value = quizState.questions || [];
+
+  if (quizState.practiceStartTime) {
+    practiceStartTime.value = new Date(quizState.practiceStartTime);
+  }
+};
+
+// Clear quiz state from localStorage
+const clearQuizState = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error("Failed to clear quiz state:", error);
+  }
+};
+
 // Load only active questions from database
 const loadQuestions = async () => {
   loading.value = true;
@@ -593,13 +688,24 @@ const loadQuestions = async () => {
     }
 
     if (existingResult) {
-      todayCompleted.value = true;
-      todayResults.value = {
-        score: existingResult.score || 0,
-        accuracy: Math.round(existingResult.accuracy || 0),
-        questionsAttempted: existingResult.questions_attempted || 0,
-        correctAnswers: existingResult.correct_answers || 0,
-      };
+      // Check if there's an ongoing quiz session even if today is completed
+      const savedState = loadQuizState();
+      if (
+        savedState &&
+        savedState.practiceStarted &&
+        !savedState.practiceCompleted
+      ) {
+        // There's an ongoing session, don't mark as completed yet
+        todayCompleted.value = false;
+      } else {
+        todayCompleted.value = true;
+        todayResults.value = {
+          score: existingResult.score || 0,
+          accuracy: Math.round(existingResult.accuracy || 0),
+          questionsAttempted: existingResult.questions_attempted || 0,
+          correctAnswers: existingResult.correct_answers || 0,
+        };
+      }
     } else {
       todayCompleted.value = false;
     }
@@ -638,6 +744,20 @@ const loadQuestions = async () => {
       } else {
         questions.value = [];
       }
+    }
+
+    // Check for existing quiz session after loading questions
+    const savedState = loadQuizState();
+    if (
+      savedState &&
+      savedState.practiceStarted &&
+      !savedState.practiceCompleted
+    ) {
+      // Restore the ongoing quiz session
+      restoreQuizState(savedState);
+
+      // Reset any UI states that shouldn't persist
+      showFeedback.value = false;
     }
   } catch (err) {
     console.error("❌ Error loading math questions:", err);
@@ -737,6 +857,9 @@ const saveMathResults = async (mathData) => {
 
 // Allow retaking today's practice
 const allowRetake = () => {
+  // Clear any existing session state
+  clearQuizState();
+
   todayCompleted.value = false;
   practiceStarted.value = false;
   practiceCompleted.value = false;
@@ -745,25 +868,47 @@ const allowRetake = () => {
 
 // Start practice
 const startPractice = () => {
+  // Clear any existing session state when starting fresh
+  clearQuizState();
+
   practiceStarted.value = true;
   resetPractice();
+
+  // Save initial state
+  saveQuizState();
 };
 
 // Methods
 const addToWork = (value) => {
   workArea.value += value;
+  // Save state when work area is updated
+  if (practiceStarted.value) {
+    saveQuizState();
+  }
 };
 
 const clearLastCharacter = () => {
   workArea.value = workArea.value.slice(0, -1);
+  // Save state when work area is updated
+  if (practiceStarted.value) {
+    saveQuizState();
+  }
 };
 
 const clearWork = () => {
   workArea.value = "";
+  // Save state when work area is cleared
+  if (practiceStarted.value) {
+    saveQuizState();
+  }
 };
 
 const clearAnswer = () => {
   finalAnswer.value = "";
+  // Save state when answer is cleared
+  if (practiceStarted.value) {
+    saveQuizState();
+  }
 };
 
 const resetPractice = () => {
@@ -778,6 +923,9 @@ const resetPractice = () => {
 };
 
 const restartPractice = () => {
+  // Clear any existing session state
+  clearQuizState();
+
   practiceStarted.value = false;
   practiceCompleted.value = false;
   resetPractice();
@@ -809,6 +957,9 @@ const submitAnswer = () => {
   });
 
   showFeedback.value = true;
+
+  // Save state after submitting answer
+  saveQuizState();
 };
 
 // Update nextQuestion method to save results when practice is complete
@@ -819,6 +970,9 @@ const nextQuestion = async () => {
 
   if (currentQuestionIndex.value + 1 < questions.value.length) {
     currentQuestionIndex.value++;
+
+    // Save state after moving to next question
+    saveQuizState();
   } else {
     // Practice complete - save results to database
     if (practiceQuestions.value.length > 0) {
@@ -851,6 +1005,9 @@ const nextQuestion = async () => {
     }
 
     practiceCompleted.value = true;
+
+    // Clear the quiz state from localStorage when practice is completed
+    clearQuizState();
   }
 };
 

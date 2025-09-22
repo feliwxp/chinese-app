@@ -563,13 +563,20 @@ const loadQuizData = async () => {
     }
 
     if (existingResult) {
-      todayCompleted.value = true;
-      todayResults.value = {
-        score: existingResult.score || 0,
-        accuracy: Math.round(existingResult.accuracy || 0),
-        wordsStudied: existingResult.words_studied || 0,
-        correctAnswers: existingResult.correct_answers || 0,
-      };
+      // Check if there's an ongoing quiz session even if today is completed
+      const savedState = loadQuizState();
+      if (savedState && savedState.quizStarted && !savedState.quizCompleted) {
+        // There's an ongoing session, don't mark as completed yet
+        todayCompleted.value = false;
+      } else {
+        todayCompleted.value = true;
+        todayResults.value = {
+          score: existingResult.score || 0,
+          accuracy: Math.round(existingResult.accuracy || 0),
+          wordsStudied: existingResult.words_studied || 0,
+          correctAnswers: existingResult.correct_answers || 0,
+        };
+      }
     } else {
       todayCompleted.value = false;
     }
@@ -589,6 +596,19 @@ const loadQuizData = async () => {
       );
     }
     quizWords.value = words;
+
+    // Check for existing quiz session after loading words
+    const savedState = loadQuizState();
+    if (savedState && savedState.quizStarted && !savedState.quizCompleted) {
+      // Restore the ongoing quiz session
+      restoreQuizState(savedState);
+
+      // Reset any UI states that shouldn't persist
+      isRecording.value = false;
+      isPlaying.value = false;
+      isProcessing.value = false;
+      recordingStatus.value = null;
+    }
   } catch (err) {
     console.error("❌ Error loading quiz data:", err);
     error.value = err.message || "Failed to load quiz data. Please try again.";
@@ -657,6 +677,9 @@ const saveQuizResults = async () => {
 
 // Allow retaking today's quiz
 const allowRetake = () => {
+  // Clear any existing session state
+  clearQuizState();
+
   todayCompleted.value = false;
   quizStarted.value = false;
   quizCompleted.value = false;
@@ -971,6 +994,9 @@ const processSpeechResult = (transcript) => {
   }
 
   canProceed.value = true;
+
+  // Save state after processing answer
+  saveQuizState();
 };
 
 // Convert Chinese text to pinyin
@@ -1173,6 +1199,9 @@ const playAudio = async () => {
         "You listened to the pronunciation. No points awarded for this word.",
     };
     canProceed.value = true;
+
+    // Save state after using hint
+    saveQuizState();
   }
 
   isPlaying.value = true;
@@ -1377,6 +1406,101 @@ const accuracy = computed(() => {
     : 0;
 });
 
+// localStorage key for persisting quiz state
+const STORAGE_KEY = "reading-quiz-state";
+
+// Get today's date string for validation
+const getTodayDateString = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(today.getDate()).padStart(2, "0")}`;
+};
+
+// Save quiz state to localStorage
+const saveQuizState = () => {
+  if (!quizStarted.value) return;
+
+  const quizState = {
+    date: getTodayDateString(),
+    quizStarted: quizStarted.value,
+    quizCompleted: quizCompleted.value,
+    currentQuestionIndex: currentQuestionIndex.value,
+    score: score.value,
+    correctAnswers: correctAnswers.value,
+    totalQuestions: totalQuestions.value,
+    wordResults: wordResults.value,
+    quizWords: quizWords.value,
+    hasAttempted: hasAttempted.value,
+    canProceed: canProceed.value,
+    showHint: showHint.value,
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(quizState));
+  } catch (error) {
+    console.error("Failed to save quiz state:", error);
+  }
+};
+
+// Load quiz state from localStorage
+const loadQuizState = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+
+    const quizState = JSON.parse(saved);
+
+    // Validate that the saved state is from today
+    if (quizState.date !== getTodayDateString()) {
+      // Clear old state if it's from a different day
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    // Validate that the state is not too old (more than 8 hours)
+    const savedTime = new Date(quizState.timestamp);
+    const now = new Date();
+    const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
+
+    if (hoursDiff > 8) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    return quizState;
+  } catch (error) {
+    console.error("Failed to load quiz state:", error);
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+};
+
+// Restore quiz state
+const restoreQuizState = (quizState) => {
+  quizStarted.value = quizState.quizStarted;
+  quizCompleted.value = quizState.quizCompleted;
+  currentQuestionIndex.value = quizState.currentQuestionIndex;
+  score.value = quizState.score;
+  correctAnswers.value = quizState.correctAnswers;
+  wordResults.value = quizState.wordResults || [];
+  quizWords.value = quizState.quizWords || [];
+  hasAttempted.value = quizState.hasAttempted || false;
+  canProceed.value = quizState.canProceed || false;
+  showHint.value = quizState.showHint || false;
+};
+
+// Clear quiz state from localStorage
+const clearQuizState = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.error("Failed to clear quiz state:", error);
+  }
+};
+
 // Methods
 const resetQuiz = () => {
   currentQuestionIndex.value = 0;
@@ -1387,8 +1511,14 @@ const resetQuiz = () => {
 };
 
 const startQuiz = () => {
+  // Clear any existing session state when starting fresh
+  clearQuizState();
+
   quizStarted.value = true;
   resetQuiz();
+
+  // Save initial state
+  saveQuizState();
 };
 
 const resetQuestionState = () => {
@@ -1405,6 +1535,9 @@ const nextQuestion = () => {
   if (currentQuestionIndex.value < totalQuestions.value - 1) {
     currentQuestionIndex.value++;
     resetQuestionState();
+
+    // Save state after moving to next question
+    saveQuizState();
   } else {
     completeQuiz();
   }
@@ -1413,9 +1546,15 @@ const nextQuestion = () => {
 const completeQuiz = async () => {
   quizCompleted.value = true;
   await saveQuizResults();
+
+  // Clear the quiz state from localStorage when quiz is completed
+  clearQuizState();
 };
 
 const restartQuiz = () => {
+  // Clear any existing session state
+  clearQuizState();
+
   quizStarted.value = false;
   quizCompleted.value = false;
   resetQuiz();
