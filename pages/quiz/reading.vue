@@ -249,6 +249,21 @@
             {{ currentWord.chinese }}
           </div>
 
+          <!-- Pinyin Display (shown when Listen is clicked) -->
+          <div
+            v-if="showPinyin"
+            class="bg-blue-50 rounded-xl p-3 md:p-4 mb-4 md:mb-6 border-2 border-blue-200"
+          >
+            <div class="text-sm md:text-base font-semibold text-blue-700 mb-2">
+              📢 Pronunciation (Hanyu Pinyin):
+            </div>
+            <div class="text-lg md:text-2xl font-bold text-blue-600">
+              {{
+                convertPinyinToToneMarks(convertToPinyin(currentWord.chinese))
+              }}
+            </div>
+          </div>
+
           <!-- Control Buttons -->
           <div class="flex flex-col gap-2 md:gap-3 mb-4 md:mb-6">
             <!-- Listen Button -->
@@ -290,7 +305,7 @@
                   : hasAttempted
                   ? "Done"
                   : isRecording
-                  ? "Stop"
+                  ? "Submit"
                   : "Record"
               }}</span>
             </button>
@@ -516,9 +531,13 @@ const isPlaying = ref(false);
 const recordingStatus = ref(null);
 const canProceed = ref(false);
 const hasAttempted = ref(false);
+const showPinyin = ref(false);
 
 // Add processing state
 const isProcessing = ref(false);
+
+// Add recognition state tracking
+const recognitionState = ref("idle"); // 'idle', 'starting', 'active', 'stopping'
 
 // Speech recognition setup
 let recognition = null;
@@ -699,6 +718,7 @@ const initSpeechRecognition = () => {
 
     recognition.onstart = () => {
       console.log("Speech recognition started");
+      recognitionState.value = "active";
       currentTranscript = ""; // Reset transcript
       recordingStatus.value = {
         type: "info",
@@ -708,6 +728,20 @@ const initSpeechRecognition = () => {
     };
 
     recognition.onresult = (event) => {
+      // Always allow processing if user hasn't attempted yet (unless it's a restart)
+      if (hasAttempted.value || isRestarting.value) {
+        console.log(
+          "🚫 Ignoring speech result - already attempted or restarting",
+          {
+            recognitionState: recognitionState.value,
+            isRecording: isRecording.value,
+            hasAttempted: hasAttempted.value,
+            isRestarting: isRestarting.value,
+          }
+        );
+        return;
+      }
+
       // Log all results for debugging
       console.log("🎤 Speech results:", event.results);
 
@@ -733,11 +767,12 @@ const initSpeechRecognition = () => {
       // Update current transcript but don't process yet
       if (finalTranscript) {
         currentTranscript = finalTranscript.trim();
+        console.log("📝 Updated currentTranscript:", currentTranscript);
       }
 
-      // Show interim results to user without processing (only if not empty)
+      // Show interim results to user without processing (only if still recording and not empty)
       const displayText = finalTranscript || interimTranscript;
-      if (displayText && isRecording.value) {
+      if (displayText && isRecording.value && !hasAttempted.value) {
         const displayPinyin = convertToPinyin(displayText);
         const properPinyin = convertPinyinToToneMarks(displayPinyin);
         recordingStatus.value = {
@@ -765,32 +800,44 @@ const initSpeechRecognition = () => {
     };
 
     recognition.onend = () => {
-      console.log("Speech recognition ended");
+      console.log("Speech recognition ended", {
+        recognitionState: recognitionState.value,
+        isRecording: isRecording.value,
+        isRestarting: isRestarting.value,
+        currentTranscript,
+        hasAttempted: hasAttempted.value,
+      });
 
-      // Only process the result if the user manually stopped recording (not restarted) AND we have valid content
+      recognitionState.value = "idle";
+
+      // Process the result if we have valid content and user hasn't attempted yet (not a restart)
       if (
         currentTranscript &&
         currentTranscript.trim() &&
-        !isRecording.value &&
+        !hasAttempted.value &&
         !isRestarting.value
       ) {
-        console.log(
-          "🎯 Processing transcript on user stop:",
-          currentTranscript
-        );
+        console.log("🎯 Processing transcript:", currentTranscript);
         processSpeechResult(currentTranscript);
       } else if (
         (!currentTranscript || !currentTranscript.trim()) &&
-        !isRecording.value &&
+        !hasAttempted.value &&
         !isRestarting.value
       ) {
         // Only show error if we haven't processed any result and user stopped (not restarted)
+        console.log("❌ No speech detected");
         recordingStatus.value = {
           type: "error",
           title: "No Clear Speech Detected",
           message:
             "Please speak more clearly and try again. Make sure you're in a quiet environment.",
         };
+      } else {
+        console.log("ℹ️ Recognition ended but not processing:", {
+          hasTranscript: !!currentTranscript,
+          hasAttempted: hasAttempted.value,
+          isRestarting: isRestarting.value,
+        });
       }
 
       // Reset restart flag
@@ -1182,6 +1229,9 @@ const selectBestChineseVoice = () => {
 const playAudio = async () => {
   if (isPlaying.value) return;
 
+  // Show the pinyin when Listen is clicked
+  showPinyin.value = true;
+
   if (!hasAttempted.value) {
     hasAttempted.value = true;
 
@@ -1283,10 +1333,11 @@ const startRecording = async () => {
     }
 
     // Stop any existing recognition first
-    if (isRecording.value) {
+    if (recognitionState.value !== "idle") {
+      console.log("🛑 Stopping existing recognition before starting new one");
       recognition.stop();
-      isRecording.value = false;
-      await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay
+      recognitionState.value = "stopping";
+      await new Promise((resolve) => setTimeout(resolve, 300)); // Wait for cleanup
     }
 
     // Request microphone permission explicitly
@@ -1312,6 +1363,7 @@ const startRecording = async () => {
       return;
     }
 
+    recognitionState.value = "starting";
     isRecording.value = true;
     recordingStatus.value = {
       type: "info",
@@ -1330,19 +1382,36 @@ const startRecording = async () => {
         "Could not start recording. Please check your microphone permissions and try again.",
     };
     isRecording.value = false;
+    recognitionState.value = "idle";
   }
 };
 
 const stopRecording = () => {
   if (recognition) {
     try {
-      if (isRecording.value) {
-        isRecording.value = false; // Set this first
+      if (isRecording.value && recognitionState.value === "active") {
+        console.log("🛑 Stopping speech recognition...");
+        recognitionState.value = "stopping";
+        isRecording.value = false; // Set this first to prevent new results processing
         recognition.stop(); // This will trigger onend which will process the result
+
+        // Add a safety timeout to ensure recognition stops
+        setTimeout(() => {
+          if (
+            recognition &&
+            recognition.abort &&
+            recognitionState.value !== "idle"
+          ) {
+            console.log("🚨 Force aborting recognition after timeout");
+            recognition.abort();
+            recognitionState.value = "idle";
+          }
+        }, 1000);
       }
     } catch (error) {
       console.error("Error stopping recording:", error);
       isRecording.value = false;
+      recognitionState.value = "idle";
     }
   }
 };
@@ -1352,22 +1421,31 @@ const restartRecording = () => {
   if (recognition) {
     try {
       isRestarting.value = true; // Flag that this is a restart, not a stop
+      console.log("🔄 Restarting speech recognition...");
 
       if (isRecording.value) {
+        isRecording.value = false; // Stop accepting new results
         recognition.stop(); // Stop current recording
-        isRecording.value = false;
+
+        // Force abort if needed
+        setTimeout(() => {
+          if (recognition && recognition.abort) {
+            recognition.abort();
+          }
+        }, 500);
       }
 
       recordingStatus.value = null;
 
-      // Start new recording after a brief delay
+      // Start new recording after a delay to ensure clean state
       setTimeout(() => {
         if (!hasAttempted.value && isRestarting.value) {
           // Make sure user hasn't attempted yet and this is still a restart
+          console.log("🚀 Starting fresh recording session...");
           startRecording();
         }
         isRestarting.value = false; // Reset restart flag
-      }, 200);
+      }, 600); // Increased delay to ensure previous session is fully stopped
     } catch (error) {
       console.error("Error restarting recording:", error);
       isRecording.value = false;
@@ -1435,6 +1513,7 @@ const saveQuizState = () => {
     hasAttempted: hasAttempted.value,
     canProceed: canProceed.value,
     showHint: showHint.value,
+    showPinyin: showPinyin.value,
     timestamp: new Date().toISOString(),
   };
 
@@ -1490,6 +1569,7 @@ const restoreQuizState = (quizState) => {
   hasAttempted.value = quizState.hasAttempted || false;
   canProceed.value = quizState.canProceed || false;
   showHint.value = quizState.showHint || false;
+  showPinyin.value = quizState.showPinyin || false;
 };
 
 // Clear quiz state from localStorage
@@ -1523,6 +1603,7 @@ const startQuiz = () => {
 
 const resetQuestionState = () => {
   showHint.value = false;
+  showPinyin.value = false;
   recordingStatus.value = null;
   canProceed.value = false;
   isRecording.value = false;
