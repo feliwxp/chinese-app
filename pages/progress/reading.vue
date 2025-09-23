@@ -340,25 +340,54 @@
                       <div
                         v-for="word in selectedDayData.words"
                         :key="word.id"
-                        class="flex justify-between items-center p-2 md:p-3 bg-gray-50 rounded-lg"
+                        class="p-2 md:p-3 bg-gray-50 rounded-lg border-l-4"
+                        :class="
+                          word.correct ? 'border-green-500' : 'border-red-500'
+                        "
                       >
-                        <div>
-                          <div
-                            class="chinese-text text-base md:text-lg font-semibold"
-                          >
-                            {{ word.chinese }}
+                        <div class="flex justify-between items-start mb-2">
+                          <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                              <div
+                                class="chinese-text text-base md:text-lg font-semibold"
+                              >
+                                {{ word.chinese }}
+                              </div>
+                              <div
+                                :class="
+                                  word.correct
+                                    ? 'text-green-500'
+                                    : 'text-red-500'
+                                "
+                                class="text-lg"
+                              >
+                                {{ word.correct ? "✅" : "❌" }}
+                              </div>
+                            </div>
+                            <div class="text-xs md:text-sm text-gray-600 mb-1">
+                              {{ word.english }}
+                            </div>
                           </div>
-                          <div class="text-xs md:text-sm text-gray-600">
-                            {{ word.english }}
+                          <div class="text-right">
+                            <div
+                              class="text-xs md:text-sm font-semibold"
+                              :class="getPointsColor(word.points)"
+                            >
+                              {{ word.points || 0 }}pts
+                            </div>
                           </div>
                         </div>
-                        <div
-                          :class="
-                            word.correct ? 'text-green-500' : 'text-red-500'
-                          "
-                          class="text-lg md:text-xl"
-                        >
-                          {{ word.correct ? "✅" : "❌" }}
+
+                        <!-- Transcript -->
+                        <div v-if="word.transcript" class="mt-2">
+                          <div class="text-xs text-gray-500 mb-1">
+                            Your answer: "{{ word.transcript }}"
+                          </div>
+                        </div>
+                        <div v-else-if="word.correct === false" class="mt-2">
+                          <div class="text-xs text-gray-500 italic">
+                            No transcript recorded
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -709,6 +738,13 @@ const getWeekDayClass = (day) => {
   }
 
   return classes.join(" ");
+};
+
+// Helper function for points color styling
+const getPointsColor = (points) => {
+  if (points === 10) return "text-green-600";
+  if (points === 5) return "text-yellow-600";
+  return "text-red-600";
 };
 
 // Load initial data
