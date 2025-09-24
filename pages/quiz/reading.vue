@@ -462,66 +462,6 @@
             </div>
           </div>
 
-          <!-- Simplified Analytics -->
-          <div class="bg-white rounded-xl p-4 md:p-6 mb-6 md:mb-8 text-left">
-            <h3
-              class="text-lg md:text-xl font-bold text-gray-700 mb-4 flex items-center gap-2"
-            >
-              <span>📈</span>
-              Performance Breakdown
-            </h3>
-
-            <!-- Points Breakdown -->
-            <div class="grid grid-cols-3 gap-2 md:gap-3 mb-4">
-              <div
-                class="bg-green-50 rounded-lg p-2 md:p-3 text-center border border-green-200"
-              >
-                <div class="text-sm md:text-lg font-bold text-green-600">
-                  {{ analyticsData.perfectScore }}
-                </div>
-                <div class="text-xs text-gray-600">Perfect (10pts)</div>
-              </div>
-              <div
-                class="bg-yellow-50 rounded-lg p-2 md:p-3 text-center border border-yellow-200"
-              >
-                <div class="text-sm md:text-lg font-bold text-yellow-600">
-                  {{ analyticsData.hintScore }}
-                </div>
-                <div class="text-xs text-gray-600">With Hints (5pts)</div>
-              </div>
-              <div
-                class="bg-red-50 rounded-lg p-2 md:p-3 text-center border border-red-200"
-              >
-                <div class="text-sm md:text-lg font-bold text-red-600">
-                  {{ analyticsData.noPoints }}
-                </div>
-                <div class="text-xs text-gray-600">No Points (0pts)</div>
-              </div>
-            </div>
-
-            <!-- Summary Stats -->
-            <div class="grid grid-cols-2 gap-3 text-sm md:text-base">
-              <div class="bg-purple-50 rounded-lg p-3 border border-purple-200">
-                <div class="flex justify-between items-center">
-                  <span class="font-medium text-purple-700">Used Hints:</span>
-                  <span class="font-bold text-purple-600"
-                    >{{ analyticsData.usedHintCount }}/{{
-                      analyticsData.totalAttempted
-                    }}</span
-                  >
-                </div>
-              </div>
-              <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <div class="flex justify-between items-center">
-                  <span class="font-medium text-blue-700">Efficiency:</span>
-                  <span class="font-bold text-blue-600"
-                    >{{ analyticsData.efficiency }}%</span
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div class="space-y-3 md:space-y-4">
             <NuxtLink
               to="/progress/reading"
@@ -706,17 +646,12 @@ const saveQuizResults = async () => {
       today.getMonth() + 1
     ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    // Prepare words data for JSON storage with essential information
+    // Prepare words data for JSON storage
     const wordsData = wordResults.value.filter(Boolean).map((word) => ({
       chinese: word.chinese,
       english: word.english,
       correct: word.correct,
-      points: word.points || 0,
-      usedHint: word.usedHint || false,
-      transcript: word.transcript || null,
     }));
-
-    console.log("💾 Saving quiz results:", wordsData);
 
     const quizResult = {
       date: todayDateString,
@@ -1059,29 +994,14 @@ const processSpeechResult = (transcript) => {
   isProcessing.value = false;
 
   // Track this word's result
-  const points = isCorrect ? (showHint.value || showPinyin.value ? 5 : 10) : 0;
-  const usedHint = showHint.value || showPinyin.value; // Track if any hint was used
-
-  console.log("📊 Assigning points for question:", {
-    currentQuestionIndex: currentQuestionIndex.value,
-    chinese: currentWord.value.chinese,
-    isCorrect,
-    points,
-    usedHint,
-    transcript,
-  });
-
   wordResults.value[currentQuestionIndex.value] = {
     chinese: currentWord.value.chinese,
     english: currentWord.value.english,
     correct: isCorrect,
-    points: points,
-    usedHint: usedHint,
-    transcript: transcript, // Store what the user said
   };
 
   if (isCorrect) {
-    const points = wordResults.value[currentQuestionIndex.value].points;
+    const points = showHint.value ? 5 : 10;
     score.value += points;
     correctAnswers.value++;
 
@@ -1315,19 +1235,11 @@ const playAudio = async () => {
   if (!hasAttempted.value) {
     hasAttempted.value = true;
 
-    console.log("🎵 Listen hint used for question:", {
-      currentQuestionIndex: currentQuestionIndex.value,
-      chinese: currentWord.value.chinese,
-    });
-
-    // Track this word as incorrect with hint usage (listened to pronunciation)
+    // Track this word as incorrect (listened to hint)
     wordResults.value[currentQuestionIndex.value] = {
       chinese: currentWord.value.chinese,
       english: currentWord.value.english,
       correct: false,
-      points: 0,
-      usedHint: true,
-      transcript: null, // No speech transcript since they used listen
     };
 
     recordingStatus.value = {
@@ -1570,53 +1482,6 @@ const accuracy = computed(() => {
   return totalQuestions.value > 0
     ? (correctAnswers.value / totalQuestions.value) * 100
     : 0;
-});
-
-// Simplified analytics computed properties
-const analyticsData = computed(() => {
-  const results = wordResults.value.filter(Boolean);
-  const totalAttempted = results.length;
-
-  if (totalAttempted === 0) {
-    return {
-      totalAttempted: 0,
-      perfectScore: 0,
-      hintScore: 0,
-      noPoints: 0,
-      usedHintCount: 0,
-      noHintCount: 0,
-      totalPointsEarned: 0,
-      maxPossiblePoints: 0,
-      efficiency: 0,
-    };
-  }
-
-  const perfectScore = results.filter((r) => r.points === 10).length;
-  const hintScore = results.filter((r) => r.points === 5).length;
-  const noPoints = results.filter((r) => r.points === 0).length;
-
-  const usedHintCount = results.filter((r) => r.usedHint).length;
-  const noHintCount = results.filter((r) => !r.usedHint).length;
-
-  const totalPointsEarned = results.reduce(
-    (sum, r) => sum + (r.points || 0),
-    0
-  );
-  const maxPossiblePoints = totalAttempted * 10;
-  const efficiency =
-    maxPossiblePoints > 0 ? (totalPointsEarned / maxPossiblePoints) * 100 : 0;
-
-  return {
-    totalAttempted,
-    perfectScore,
-    hintScore,
-    noPoints,
-    usedHintCount,
-    noHintCount,
-    totalPointsEarned,
-    maxPossiblePoints,
-    efficiency: Math.round(efficiency * 100) / 100,
-  };
 });
 
 // localStorage key for persisting quiz state

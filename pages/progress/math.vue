@@ -363,13 +363,15 @@
                               {{ question.question.substring(0, 50) }}...
                             </div>
                             <div class="text-xs text-gray-600 mb-1">
-                              Answer: {{ question.answer }}
+                              Correct Answer:
+                              {{ question.correct_answer || question.answer }}
                             </div>
                             <div
-                              v-if="question.userAnswer"
+                              v-if="question.user_answer || question.userAnswer"
                               class="text-xs text-blue-600"
                             >
-                              Student Answer: {{ question.userAnswer }}
+                              Student Answer:
+                              {{ question.user_answer || question.userAnswer }}
                             </div>
                           </div>
                           <div
@@ -384,11 +386,13 @@
                           </div>
                         </div>
                         <div
-                          v-if="question.workShown"
-                          class="bg-yellow-50 p-2 rounded text-xs font-mono"
+                          v-if="question.work_shown || question.workShown"
+                          class="bg-yellow-50 p-2 rounded text-xs font-mono mb-2"
                         >
                           <strong>Work shown:</strong><br />
-                          {{ question.workShown }}
+                          <span class="whitespace-pre-line">{{
+                            question.work_shown || question.workShown
+                          }}</span>
                         </div>
                       </div>
                     </div>
