@@ -651,6 +651,9 @@ const saveQuizResults = async () => {
       chinese: word.chinese,
       english: word.english,
       correct: word.correct,
+      points: word.points || 0,
+      usedHint: word.usedHint || false,
+      transcript: word.transcript || null,
     }));
 
     const quizResult = {
@@ -993,15 +996,20 @@ const processSpeechResult = (transcript) => {
   hasAttempted.value = true;
   isProcessing.value = false;
 
-  // Track this word's result
+  // Calculate points before tracking result
+  const points = isCorrect ? (showHint.value ? 5 : 10) : 0;
+
+  // Track this word's result with all relevant data
   wordResults.value[currentQuestionIndex.value] = {
     chinese: currentWord.value.chinese,
     english: currentWord.value.english,
     correct: isCorrect,
+    points: points,
+    usedHint: showHint.value,
+    transcript: transcript,
   };
 
   if (isCorrect) {
-    const points = showHint.value ? 5 : 10;
     score.value += points;
     correctAnswers.value++;
 
@@ -1240,6 +1248,9 @@ const playAudio = async () => {
       chinese: currentWord.value.chinese,
       english: currentWord.value.english,
       correct: false,
+      points: 0,
+      usedHint: true,
+      transcript: null, // No transcript when hint is used
     };
 
     recordingStatus.value = {
